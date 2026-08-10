@@ -1,5 +1,5 @@
 [search]
-locations = ["Toronto, Montreal, Vancouver"]
+locations = "Vancouver"
 keywords = [
     "DevOps",
     "SRE",
