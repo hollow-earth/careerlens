@@ -1,10 +1,13 @@
 [search]
 locations = ["Toronto, Montreal, Vancouver"]
-
 keywords = [
     "DevOps",
     "SRE",
     "Software Developer"
+]
+companies_to_skip = [
+    "Google",
+    "Meta"
 ]
 
 [llm]
