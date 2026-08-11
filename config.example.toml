@@ -5,6 +5,8 @@ keywords = [
     "SRE",
     "Software Developer"
 ]
+time_filter = 86400
+distance = 0
 companies_to_skip = [
     "Google",
     "Meta"
