@@ -7,18 +7,19 @@ from urllib.parse import urlparse, urlunparse
 from sqlite3 import Connection
 from database import write_job_to_staging
 from joblisting import JobListing
-import scraper_utilities
+import scrapers.scraper_utilities as scraper_utilities
 
 def linkedin_scraper(conn: Connection):
     # Load config and throw everything into a search query
     with open("config.toml", "rb") as f:
         config = tomllib.load(f)
-    
+
+    # TODO: put that in scraper_utilities
     keywords = " OR ".join(f'"{item}"' for item in config["search"]["keywords"])
     location = config["search"]["locations"]
     time_filter = str(config["search"]["time_filter"])
     distance = str(config["search"]["distance"])
-    companies_to_skip = set(config["search"]["companies_to_skip"])
+
     search_url = "https://www.linkedin.com/jobs/search?"
     if keywords:
         search_url += f"keywords={keywords}&"
@@ -45,22 +46,23 @@ def linkedin_scraper(conn: Connection):
         job_cards = page.locator("ul.jobs-search__results-list > li")
         count = job_cards.count()
         i = 0
+        
         while i < count:
             print(i)
             current_job = job_cards.nth(i)
-            current_job.scroll_into_view_if_needed()
             current_job.click()
-            page.get_by_role("button", name="Show more").click()
             
-            _page_current_job = page.locator(".details-pane__content")
-            title = _page_current_job.locator(".top-card-layout__title").inner_text().strip()
-            description = _page_current_job.locator(".description__text").inner_text().strip()
+            _right_pane = page.locator(".details-pane__content")
+            title = _right_pane.locator(".top-card-layout__title").inner_text().strip()
+            link = _right_pane.locator(".topcard__link").get_attribute("href")
+            company = _right_pane.locator(".topcard__flavor-row").locator(".topcard__org-name-link").inner_text().strip()
+            location = _right_pane.locator(".topcard__flavor-row").locator(".topcard__flavor--bullet").first.inner_text().strip()
             
-            top_card = _page_current_job.locator(".topcard__flavor").all_inner_texts()
-            company = top_card[0].strip()
-            location = top_card[1].strip()
+            _description = _right_pane.locator(".core-section-container__content")
+            description = ""
+
+            # TODO: fix description
             
-            link = _page_current_job.locator(".topcard__link").get_attribute("href")
             assert link is not None, "Expected href attribute to be a string, but got None"
             parsed_url = urlparse(link)             # Clean up the string before storing
             host = parsed_url.netloc
@@ -78,12 +80,12 @@ def linkedin_scraper(conn: Connection):
             # TODO: add dedup
             if not scraper_utilities.is_company_blacklisted(company):
                 job_listing = JobListing(id, title, company, description, location, "LinkedIn", link)
-                write_job_to_staging(conn, job_listing)
+                print(job_listing)
+                # write_job_to_staging(conn, job_listing)
             sleep(uniform(1.5, 3.0))
+            #page.evaluate("window.scrollBy(0, window.innerHeight * 0.8)")
             i += 1
             count = job_cards.count()               # As we scroll down, we may load more jobs, so update the count as well
-            if i == 2:
-                break
         browser.close()
         
     # get_started = page.get_by_role("link", name="Get started")
