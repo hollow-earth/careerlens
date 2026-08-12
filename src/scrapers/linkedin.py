@@ -7,6 +7,7 @@ from urllib.parse import urlparse, urlunparse
 from sqlite3 import Connection
 from database import write_job_to_staging
 from joblisting import JobListing
+import scraper_utilities
 
 def linkedin_scraper(conn: Connection):
     # Load config and throw everything into a search query
@@ -74,7 +75,8 @@ def linkedin_scraper(conn: Connection):
             id = int(match.group(1).strip())
             
             # TODO: maybe add a location filter? Though LinkedIn is supposed to be the one handling that.
-            if company not in companies_to_skip:
+            # TODO: add dedup
+            if not scraper_utilities.is_company_blacklisted(company):
                 job_listing = JobListing(id, title, company, description, location, "LinkedIn", link)
                 write_job_to_staging(conn, job_listing)
             sleep(uniform(1.5, 3.0))
