@@ -8,7 +8,7 @@ from sqlite3 import Connection
 from database import write_job_to_staging
 from joblisting import JobListing
 
-def linkedin_scrape(conn: Connection)
+def linkedin_scrape(conn: Connection):
     # Load config and throw everything into a search query
     with open("config.toml", "rb") as f:
         config = tomllib.load(f)
