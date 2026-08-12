@@ -5,6 +5,8 @@ from time import sleep
 from random import uniform
 from urllib.parse import urlparse, urlunparse
 from sqlite3 import Connection
+from database import write_job_to_staging
+from joblisting import JobListing
 
 def linkedin_scrape(conn: Connection)
     # Load config and throw everything into a search query
@@ -69,8 +71,11 @@ def linkedin_scrape(conn: Connection)
                 parsed_url.path, '', '', ''))       # Strip useless tracking nonsense
             match = re.search(r"jobs/view/(?:.+\-)?(\d+)/?", link)
             assert match is not None, f"Regex failed to extract a Job ID from the URL: {link}"
+
             id = int(match.group(1))
-            
+
+            job_listing = JobListing(id, title, company, description, location, "LinkedIn", link)
+            write_job_to_staging(conn, job_listing)
             sleep(uniform(1.5, 3.0))
             i += 1
             count = job_cards.count()               # As we scroll down, we may load more jobs, so update the count as well

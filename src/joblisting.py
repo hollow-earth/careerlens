@@ -4,8 +4,8 @@ from dataclasses import dataclass
 class JobListing:
     job_id: int
     title: str
-    link: str
     company: str
-    location: str
     description: str
+    location: str
     source: str
+    link: str
