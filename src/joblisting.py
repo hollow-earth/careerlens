@@ -8,3 +8,4 @@ class JobListing:
     company: str
     location: str
     description: str
+    source: str
