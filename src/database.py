@@ -18,7 +18,8 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 location TEXT NOT NULL,
                 source TEXT NOT NULL,
                 url TEXT NOT NULL UNIQUE,
-    
+                redirects_to TEXT NOT NULL,
+                
                 status TEXT NOT NULL DEFAULT 'New',
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
@@ -41,6 +42,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 location TEXT NOT NULL,
                 source TEXT NOT NULL,
                 url TEXT NOT NULL UNIQUE
+                redirects_to TEXT NOT NULL
             )
             """)
         conn.commit()
