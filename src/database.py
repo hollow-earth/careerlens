@@ -1,4 +1,5 @@
 import sqlite3
+from joblisting import JobListing
 
 def connect() -> sqlite3.Connection:
     return sqlite3.connect("./data/data.db")
@@ -16,6 +17,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 id INTEGER PRIMARY KEY,
                 company TEXT NOT NULL,
                 title TEXT NOT NULL,
+                location TEXT NOT NULL,
                 source TEXT NOT NULL,
                 url TEXT NOT NULL UNIQUE,
     
@@ -37,6 +39,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 id INTEGER PRIMARY KEY,
                 company TEXT NOT NULL,
                 title TEXT NOT NULL,
+                location TEXT NOT NULL,
                 source TEXT NOT NULL,
                 url TEXT NOT NULL UNIQUE,
             )
