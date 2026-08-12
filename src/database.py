@@ -18,7 +18,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 description TEXT NOT NULL,
                 location TEXT NOT NULL,
                 source TEXT NOT NULL,
-                url TEXT NOT NULL UNIQUE
+                url TEXT NOT NULL UNIQUE,
                 redirects_to TEXT,
                 
                 status TEXT NOT NULL DEFAULT 'New',
