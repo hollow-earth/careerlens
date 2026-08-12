@@ -39,10 +39,10 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 id INTEGER PRIMARY KEY,
                 title TEXT NOT NULL,
                 company TEXT NOT NULL,
-                description TEXT NOT NULL
+                description TEXT NOT NULL,
                 location TEXT NOT NULL,
                 source TEXT NOT NULL,
-                url TEXT NOT NULL UNIQUE,
+                url TEXT NOT NULL UNIQUE
             )
             """)
         conn.commit()
@@ -51,11 +51,17 @@ def init_tables(conn: sqlite3.Connection) -> None:
 
 def write_job_to_staging(conn: sqlite3.Connection, job: JobListing):
     cursor = conn.cursor()
-    cursor.execute(f"""
+    cursor.execute("""
         INSERT INTO staging (id, title, company, description, location, source, url)
-        VALUES {job.job_id}, {job.title}, {job.company}, {job.description}, 
-            {job.location}, {job.source}, {job.link}
-        """)
+        VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (job.job_id, 
+        job.title, 
+        job.company, 
+        job.description, 
+        job.location, 
+        job.source, 
+        job.link)
+    )
     conn.commit()
 
 def close(conn: sqlite3.Connection) -> None:
