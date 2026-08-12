@@ -13,12 +13,13 @@ def init_tables(conn: sqlite3.Connection) -> None:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS jobs (
                 id INTEGER PRIMARY KEY,
-                company TEXT NOT NULL,
                 title TEXT NOT NULL,
+                company TEXT NOT NULL,
+                description TEXT NOT NULL,
                 location TEXT NOT NULL,
                 source TEXT NOT NULL,
-                url TEXT NOT NULL UNIQUE,
-                redirects_to TEXT NOT NULL,
+                url TEXT NOT NULL UNIQUE
+                redirects_to TEXT,
                 
                 status TEXT NOT NULL DEFAULT 'New',
                 created_at TEXT NOT NULL,
@@ -41,8 +42,8 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 description TEXT NOT NULL,
                 location TEXT NOT NULL,
                 source TEXT NOT NULL,
-                url TEXT NOT NULL UNIQUE
-                redirects_to TEXT NOT NULL
+                url TEXT NOT NULL UNIQUE,
+                redirects_to TEXT
             )
             """)
         conn.commit()
