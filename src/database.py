@@ -6,12 +6,10 @@ def connect() -> sqlite3.Connection:
 
 def init_tables(conn: sqlite3.Connection) -> None:
     cursor = conn.cursor()
-    cursor.execute("PRAGMA schema_version")
-    schema_version = cursor.fetchone()[0]
-
-    print(schema_version)
+    cursor.execute("PRAGMA user_version")
+    user_version = cursor.fetchone()[0]
     
-    if schema_version == 0 or schema_version == 1:
+    if  user_version == 0:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS jobs (
                 id INTEGER PRIMARY KEY,
@@ -52,16 +50,19 @@ def init_tables(conn: sqlite3.Connection) -> None:
 def write_job_to_staging(conn: sqlite3.Connection, job: JobListing):
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO staging (id, title, company, description, location, source, url)
-        VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (job.job_id, 
-        job.title, 
-        job.company, 
-        job.description, 
-        job.location, 
-        job.source, 
-        job.link)
-    )
+        INSERT OR IGNORE INTO staging 
+            (id, title, company, description, location, source, url)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            job.job_id, 
+            job.title, 
+            job.company, 
+            job.description, 
+            job.location, 
+            job.source, 
+            job.link)
+        )
     conn.commit()
 
 def close(conn: sqlite3.Connection) -> None:
