@@ -1,6 +1,6 @@
 import tomllib
-import re
-from playwright.sync_api import Page, expect, sync_playwright
+from re import search
+from playwright.sync_api import sync_playwright
 from time import sleep
 from random import uniform
 from urllib.parse import urlparse, urlunparse
@@ -8,7 +8,7 @@ from sqlite3 import Connection
 from database import write_job_to_staging
 from joblisting import JobListing
 
-def linkedin_scrape(conn: Connection):
+def linkedin_scraper(conn: Connection):
     # Load config and throw everything into a search query
     with open("config.toml", "rb") as f:
         config = tomllib.load(f)
@@ -17,7 +17,7 @@ def linkedin_scrape(conn: Connection):
     location = config["search"]["locations"]
     time_filter = str(config["search"]["time_filter"])
     distance = str(config["search"]["distance"])
-    
+    companies_to_skip = set(config["search"]["companies_to_skip"])
     search_url = "https://www.linkedin.com/jobs/search?"
     if keywords:
         search_url += f"keywords={keywords}&"
@@ -32,7 +32,7 @@ def linkedin_scrape(conn: Connection):
     
     
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = p.chromium.launch(headless=False) # TODO: switch to True when tests are over
         page = browser.new_page()
         page.goto(search_url)
         
@@ -52,33 +52,36 @@ def linkedin_scrape(conn: Connection):
             page.get_by_role("button", name="Show more").click()
             
             _page_current_job = page.locator(".details-pane__content")
-            title = _page_current_job.locator(".top-card-layout__title").inner_text()
-            description = _page_current_job.locator(".description__text").inner_text()
+            title = _page_current_job.locator(".top-card-layout__title").inner_text().strip()
+            description = _page_current_job.locator(".description__text").inner_text().strip()
             
             top_card = _page_current_job.locator(".topcard__flavor").all_inner_texts()
-            company = top_card[0]
-            location = top_card[1] 
+            company = top_card[0].strip()
+            location = top_card[1].strip()
             
             link = _page_current_job.locator(".topcard__link").get_attribute("href")
             assert link is not None, "Expected href attribute to be a string, but got None"
             parsed_url = urlparse(link)             # Clean up the string before storing
             host = parsed_url.netloc
             domain_parts = host.split(".")
-            print(domain_parts)
             if len(domain_parts) > 2:               # Strip the linkedin subdomain (ca, uk, etc.)
                 host = ".".join(domain_parts[-2:])
             link = urlunparse((parsed_url.scheme, host, 
                 parsed_url.path, '', '', ''))       # Strip useless tracking nonsense
-            match = re.search(r"jobs/view/(?:.+\-)?(\d+)/?", link)
+            match = search(r"jobs/view/(?:.+\-)?(\d+)/?", link)
             assert match is not None, f"Regex failed to extract a Job ID from the URL: {link}"
 
-            id = int(match.group(1))
-
-            job_listing = JobListing(id, title, company, description, location, "LinkedIn", link)
-            write_job_to_staging(conn, job_listing)
+            id = int(match.group(1).strip())
+            
+            # TODO: maybe add a location filter? Though LinkedIn is supposed to be the one handling that.
+            if company not in companies_to_skip:
+                job_listing = JobListing(id, title, company, description, location, "LinkedIn", link)
+                write_job_to_staging(conn, job_listing)
             sleep(uniform(1.5, 3.0))
             i += 1
             count = job_cards.count()               # As we scroll down, we may load more jobs, so update the count as well
+            if i == 2:
+                break
         browser.close()
         
     # get_started = page.get_by_role("link", name="Get started")

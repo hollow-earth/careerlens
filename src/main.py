@@ -1,6 +1,6 @@
 import database
 import sqlite3
-from linkedin_scrape import linkedin_scrape
+from scrapers.linkedin import linkedin_scraper
 #def load_config():
 
 def main():
@@ -11,7 +11,7 @@ def main():
         raise
 
     database.init_tables(conn)
-    linkedin_scrape(conn)
+    linkedin_scraper(conn)
     
     try:
         database.close(conn)
