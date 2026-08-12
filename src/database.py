@@ -37,8 +37,9 @@ def init_tables(conn: sqlite3.Connection) -> None:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS staging (
                 id INTEGER PRIMARY KEY,
-                company TEXT NOT NULL,
                 title TEXT NOT NULL,
+                company TEXT NOT NULL,
+                description TEXT NOT NULL
                 location TEXT NOT NULL,
                 source TEXT NOT NULL,
                 url TEXT NOT NULL UNIQUE,
