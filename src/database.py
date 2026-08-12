@@ -47,7 +47,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
     else:
         raise Exception("Version not found")
 
-def write_job_to_staging(conn: sqlite3.Connection, job: JobListing):
+def write_job_to_staging(conn: sqlite3.Connection, job: JobListing) -> None:
     cursor = conn.cursor()
     cursor.execute("""
         INSERT OR IGNORE INTO staging 
