@@ -49,5 +49,14 @@ def init_tables(conn: sqlite3.Connection) -> None:
     else:
         raise Exception("Version not found")
 
+def write_job_to_staging(conn: sqlite3.Connection, job: JobListing):
+    cursor = conn.cursor()
+    cursor.execute(f"""
+        INSERT INTO staging (id, title, company, description, location, source, url)
+        VALUES {job.job_id}, {job.title}, {job.company}, {job.description}, 
+            {job.location}, {job.source}, {job.link}
+        """)
+    conn.commit()
+
 def close(conn: sqlite3.Connection) -> None:
     conn.close()
