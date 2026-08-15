@@ -1,16 +1,18 @@
 [search]
-locations = "Vancouver"
+location = "Vancouver"
 keywords = [
     "DevOps",
     "SRE",
     "Software Developer"
 ]
-time_filter = 86400
-distance = 0
 companies_to_skip = [
     "Google",
     "Meta"
 ]
+
+[linkedin]
+time_filter = 86400
+distance = 0
 
 [llm]
 provider = "ollama"
