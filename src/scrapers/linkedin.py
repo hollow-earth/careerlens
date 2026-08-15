@@ -14,7 +14,7 @@ def linkedin_scrape_urls(conn: Connection) -> None:
 
     # TODO: put that in scraper_utilities
     keywords = " OR ".join(f'"{item}"' for item in config["search"]["keywords"])
-    location = config["search"]["locations"]
+    location = config["search"]["location"]
     time_filter = str(config["linkedin"]["time_filter"])
     distance = str(config["linkedin"]["distance"])
 
@@ -58,17 +58,11 @@ def linkedin_scrape_urls(conn: Connection) -> None:
 
             scraped_url = current_job.locator(".base-card__full-link").get_attribute("href")
             assert scraped_url is not None, "Expected href attribute to be a string, but got None"
-            parsed_url = urlparse(scraped_url)              # Clean up the string before storing
-            host = parsed_url.netloc
-            domain_parts = host.split(".")
-            if len(domain_parts) > 2:               # Strip the linkedin subdomain (ca, uk, etc.)
-                host = ".".join(domain_parts[-2:])
-            scraped_url = urlunparse((parsed_url.scheme, host, 
-                parsed_url.path, '', '', ''))       # Strip useless tracking nonsense
-            match = search(r"jobs/view/.*?(\d+)/?$", scraped_url)
+            match = search(r"jobs/view/(?:.+\-)?(\d+)/?", scraped_url)
             assert match is not None, f"Regex failed to extract a Job ID from the URL: {scraped_url}"
             job_id = match.group(1).strip()
-
+            scraped_url = f"https://www.linkedin.com/jobs/view/{job_id}"
+            
             write_job_to_ingest(conn, "LinkedIn", job_id, scraped_url)
 
             i += 1
