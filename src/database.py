@@ -18,11 +18,11 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 title TEXT NOT NULL,
                 company TEXT NOT NULL,
                 location TEXT NOT NULL,
-                description TEXT NOT NULL,               
+                description TEXT NOT NULL,
                 source TEXT NOT NULL,
                 job_id TEXT NOT NULL,
-                url TEXT NOT NULL UNIQUE,
-                redirects_to TEXT,
+                scraped_url TEXT NOT NULL,
+                canonical_url TEXT NOT NULL,
                 
                 status TEXT NOT NULL DEFAULT 'New',
                 created_at TEXT NOT NULL,
@@ -34,7 +34,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 short_score TEXT,
                 reasoning TEXT,
 
-                UNIQUE(source, job_id, url)
+                UNIQUE(source, job_id, canonical_url)
             )
             """)
         conn.commit()
@@ -49,12 +49,12 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 description TEXT NOT NULL,
                 source TEXT NOT NULL,
                 job_id TEXT NOT NULL,
-                url TEXT NOT NULL UNIQUE,
-                redirects_to TEXT,
+                scraped_url TEXT NOT NULL,
+                canonical_url TEXT NOT NULL,
 
                 created_at TEXT NOT NULL,
 
-                UNIQUE(source, job_id, url)
+                UNIQUE(source, job_id, canonical_url)
             )
             """)
         conn.commit()
@@ -65,17 +65,18 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 
                 source TEXT NOT NULL,
                 job_id TEXT NOT NULL,
-                url TEXT NOT NULL UNIQUE,
+                scraped_url TEXT NOT NULL UNIQUE,
 
                 scraped_at TEXT NOT NULL,
 
-                UNIQUE(source, job_id, url)
+                UNIQUE(source, job_id, scraped_url)
             )
             """)
         conn.commit()
     else:
         raise Exception("Version not found")
 
+# TODO: update the function according to the new fields
 def write_job_to_staging(conn: sqlite3.Connection, job: JobListing) -> None:
     cursor = conn.cursor()
     cursor.execute("""
@@ -95,17 +96,17 @@ def write_job_to_staging(conn: sqlite3.Connection, job: JobListing) -> None:
     )
     conn.commit()
 
-def write_job_to_ingest(conn: sqlite3.Connection, source: str, job_id: str, url: str) -> None:
+def write_job_to_ingest(conn: sqlite3.Connection, source: str, job_id: str, scraped_url: str) -> None:
     cursor = conn.cursor()
     cursor.execute("""
             INSERT OR IGNORE INTO ingest 
-            (source, job_id, url, scraped_at) 
+            (source, job_id, scraped_url, scraped_at) 
             VALUES (?, ?, ?, ?)
         """,
         (
             source, 
             job_id, 
-            url, 
+            scraped_url, 
             datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
     )
