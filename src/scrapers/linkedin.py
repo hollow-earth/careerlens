@@ -10,17 +10,17 @@ from database import write_job_to_ingest, write_job_to_staging
 from joblisting import JobListing
 import scrapers.scraper_utilities as scraper_utilities
 
-def linkedin_scraper(conn: Connection):
+def linkedin_scrape_urls(conn: Connection):
     # Load config and throw everything into a search query
-    with open("config.toml", "rb") as f:
-        config = tomllib.load(f)
+    config = scraper_utilities.load_config()
 
     # TODO: put that in scraper_utilities
     keywords = " OR ".join(f'"{item}"' for item in config["search"]["keywords"])
     location = config["search"]["locations"]
-    time_filter = str(config["search"]["time_filter"])
-    distance = str(config["search"]["distance"])
+    time_filter = str(config["linkedin"]["time_filter"])
+    distance = str(config["linkedin"]["distance"])
 
+    # TODO: maybe rewrite this with urllib instead
     search_url = "https://www.linkedin.com/jobs/search?"
     if keywords:
         search_url += f"keywords={keywords}&"
@@ -46,7 +46,7 @@ def linkedin_scraper(conn: Connection):
         # TODO: this might make the program crash, add a check later
         page.get_by_role("button", name="Reject").click()
         # page.get_by_role("button", name="Close").click()
-    
+        
         # TODO: scroll to bottom to load all of the jobs
         job_cards = page.locator("ul.jobs-search__results-list > li")
         count = job_cards.count()
@@ -72,7 +72,7 @@ def linkedin_scraper(conn: Connection):
             id = match.group(1).strip()
 
             write_job_to_ingest(conn, "LinkedIn", id, url)
-            
+
             i += 1
             # Load more jobs if needed, then update the current list of jobs, then grab the next
             show_more_jobs_button = page.locator(".infinite-scroller__show-more-button")
@@ -85,5 +85,6 @@ def linkedin_scraper(conn: Connection):
             count = job_cards.count()
             sleep(uniform(1.0, 3.0))
         browser.close()
-        
-    # get_started = page.get_by_role("link", name="Get started")
+
+def linkedin_scraper(conn: Connection):
+    linkedin_scrape_urls(conn)
