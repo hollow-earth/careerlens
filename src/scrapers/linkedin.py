@@ -48,13 +48,11 @@ def linkedin_scraper(conn: Connection):
         i = 0
         
         while i < count:
-            print(i)
 
+            # Load more jobs if needed, then update the current list of jobs, then grab the next
             show_more_jobs_button = page.locator(".infinite-scroller__show-more-button")
             if show_more_jobs_button.count() and show_more_jobs_button.is_visible():
                 show_more_jobs_button.click()
-                
-            
             job_cards = page.locator("ul.jobs-search__results-list > li")
             count = job_cards.count()
             current_job = job_cards.nth(i)
@@ -88,7 +86,6 @@ def linkedin_scraper(conn: Connection):
             # TODO: add dedup
             if not scraper_utilities.is_company_blacklisted(company):
                 job_listing = JobListing(id, title, company, description, location, "LinkedIn", link)
-                print(job_listing)
                 # write_job_to_staging(conn, job_listing)
             sleep(uniform(1.0, 3.0))
             #page.evaluate("window.scrollBy(0, window.innerHeight * 0.8)")
