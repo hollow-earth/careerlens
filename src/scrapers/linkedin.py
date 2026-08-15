@@ -1,3 +1,4 @@
+from collections import defaultdict
 import tomllib
 from re import search
 from playwright.sync_api import sync_playwright
@@ -5,7 +6,7 @@ from time import sleep
 from random import uniform
 from urllib.parse import urlparse, urlunparse
 from sqlite3 import Connection
-from database import write_job_to_staging
+from database import write_job_to_ingest, write_job_to_staging
 from joblisting import JobListing
 import scrapers.scraper_utilities as scraper_utilities
 
@@ -34,13 +35,17 @@ def linkedin_scraper(conn: Connection):
     
     
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False) # TODO: switch to True when tests are over
+        browser = p.firefox.launch(headless=False) # TODO: switch to True when tests are over
         page = browser.new_page()
         page.goto(search_url)
         
         # Close the annoying pop ups
-        page.get_by_role("button", name="Dismiss").click()
+        dismiss_button = page.get_by_role("button", name="Dismiss")
+        if dismiss_button.count() and dismiss_button.is_visible():
+            dismiss_button.click()
+        # TODO: this might make the program crash, add a check later
         page.get_by_role("button", name="Reject").click()
+        # page.get_by_role("button", name="Close").click()
     
         # TODO: scroll to bottom to load all of the jobs
         job_cards = page.locator("ul.jobs-search__results-list > li")
@@ -48,49 +53,37 @@ def linkedin_scraper(conn: Connection):
         i = 0
         
         while i < count:
-
-            # Load more jobs if needed, then update the current list of jobs, then grab the next
-            show_more_jobs_button = page.locator(".infinite-scroller__show-more-button")
-            if show_more_jobs_button.count() and show_more_jobs_button.is_visible():
-                show_more_jobs_button.click()
-            job_cards = page.locator("ul.jobs-search__results-list > li")
-            count = job_cards.count()
+            if dismiss_button.count() and dismiss_button.is_visible():
+                dismiss_button.click()
             current_job = job_cards.nth(i)
             current_job.click()
-            
-            _right_pane = page.locator(".details-pane__content")
-            title = _right_pane.locator(".top-card-layout__title").inner_text().strip()
-            link = _right_pane.locator(".topcard__link").get_attribute("href")
-            company = _right_pane.locator(".topcard__flavor-row").locator(".topcard__org-name-link").inner_text().strip()
-            location = _right_pane.locator(".topcard__flavor-row").locator(".topcard__flavor--bullet").first.inner_text().strip()
-            
-            _description = _right_pane.locator(".core-section-container__content")
-            description = ""
 
-            # TODO: fix description
-            
-            assert link is not None, "Expected href attribute to be a string, but got None"
-            parsed_url = urlparse(link)             # Clean up the string before storing
+            url = current_job.locator(".base-card__full-link").get_attribute("href")
+            assert url is not None, "Expected href attribute to be a string, but got None"
+            parsed_url = urlparse(url)              # Clean up the string before storing
             host = parsed_url.netloc
             domain_parts = host.split(".")
             if len(domain_parts) > 2:               # Strip the linkedin subdomain (ca, uk, etc.)
                 host = ".".join(domain_parts[-2:])
-            link = urlunparse((parsed_url.scheme, host, 
+            url = urlunparse((parsed_url.scheme, host, 
                 parsed_url.path, '', '', ''))       # Strip useless tracking nonsense
-            match = search(r"jobs/view/(?:.+\-)?(\d+)/?", link)
-            assert match is not None, f"Regex failed to extract a Job ID from the URL: {link}"
+            match = search(r"jobs/view/(?:.+\-)?(\d+)/?", url)
+            assert match is not None, f"Regex failed to extract a Job ID from the URL: {url}"
+            id = match.group(1).strip()
 
-            id = int(match.group(1).strip())
+            write_job_to_ingest(conn, "LinkedIn", id, url)
             
-            # TODO: maybe add a location filter? Though LinkedIn is supposed to be the one handling that.
-            # TODO: add dedup
-            if not scraper_utilities.is_company_blacklisted(company):
-                job_listing = JobListing(id, title, company, description, location, "LinkedIn", link)
-                # write_job_to_staging(conn, job_listing)
-            sleep(uniform(1.0, 3.0))
-            #page.evaluate("window.scrollBy(0, window.innerHeight * 0.8)")
             i += 1
-            count = job_cards.count()               # As we scroll down, we may load more jobs, so update the count as well
+            # Load more jobs if needed, then update the current list of jobs, then grab the next
+            show_more_jobs_button = page.locator(".infinite-scroller__show-more-button")
+            if show_more_jobs_button.count() and show_more_jobs_button.is_visible():
+                if dismiss_button.count() and dismiss_button.is_visible():
+                    dismiss_button.click()
+                show_more_jobs_button.click()
+                sleep(uniform(1.0, 3.0))
+            job_cards = page.locator("ul.jobs-search__results-list > li")
+            count = job_cards.count()
+            sleep(uniform(1.0, 3.0))
         browser.close()
         
     # get_started = page.get_by_role("link", name="Get started")
