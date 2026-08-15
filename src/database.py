@@ -32,7 +32,9 @@ def init_tables(conn: sqlite3.Connection) -> None:
     
                 score INTEGER,
                 short_score TEXT,
-                reasoning TEXT
+                reasoning TEXT,
+
+                UNIQUE(source, job_id, url)
             )
             """)
         conn.commit()
@@ -44,13 +46,15 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 title TEXT NOT NULL,
                 company TEXT NOT NULL,
                 location TEXT NOT NULL,
-                description TEXT NOT NULL,               
+                description TEXT NOT NULL,
                 source TEXT NOT NULL,
                 job_id TEXT NOT NULL,
                 url TEXT NOT NULL UNIQUE,
-                redirects_to TEXT.
+                redirects_to TEXT,
 
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+
+                UNIQUE(source, job_id, url)
             )
             """)
         conn.commit()
@@ -63,7 +67,9 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 job_id TEXT NOT NULL,
                 url TEXT NOT NULL UNIQUE,
 
-                scraped_at TEXT NOT NULL
+                scraped_at TEXT NOT NULL,
+
+                UNIQUE(source, job_id, url)
             )
             """)
         conn.commit()
