@@ -1,5 +1,3 @@
-from collections import defaultdict
-import tomllib
 from re import search
 from playwright.sync_api import sync_playwright
 from time import sleep
@@ -10,7 +8,7 @@ from database import write_job_to_ingest, write_job_to_staging
 from joblisting import JobListing
 import scrapers.scraper_utilities as scraper_utilities
 
-def linkedin_scrape_urls(conn: Connection):
+def linkedin_scrape_urls(conn: Connection) -> None:
     # Load config and throw everything into a search query
     config = scraper_utilities.load_config()
 
@@ -58,20 +56,20 @@ def linkedin_scrape_urls(conn: Connection):
             current_job = job_cards.nth(i)
             current_job.click()
 
-            url = current_job.locator(".base-card__full-link").get_attribute("href")
-            assert url is not None, "Expected href attribute to be a string, but got None"
-            parsed_url = urlparse(url)              # Clean up the string before storing
+            scraped_url = current_job.locator(".base-card__full-link").get_attribute("href")
+            assert scraped_url is not None, "Expected href attribute to be a string, but got None"
+            parsed_url = urlparse(scraped_url)              # Clean up the string before storing
             host = parsed_url.netloc
             domain_parts = host.split(".")
             if len(domain_parts) > 2:               # Strip the linkedin subdomain (ca, uk, etc.)
                 host = ".".join(domain_parts[-2:])
-            url = urlunparse((parsed_url.scheme, host, 
+            scraped_url = urlunparse((parsed_url.scheme, host, 
                 parsed_url.path, '', '', ''))       # Strip useless tracking nonsense
-            match = search(r"jobs/view/(?:.+\-)?(\d+)/?", url)
-            assert match is not None, f"Regex failed to extract a Job ID from the URL: {url}"
-            id = match.group(1).strip()
+            match = search(r"jobs/view/(?:.+\-)?(\d+)/?", scraped_url)
+            assert match is not None, f"Regex failed to extract a Job ID from the URL: {scraped_url}"
+            job_id = match.group(1).strip()
 
-            write_job_to_ingest(conn, "LinkedIn", id, url)
+            write_job_to_ingest(conn, "LinkedIn", job_id, scraped_url)
 
             i += 1
             # Load more jobs if needed, then update the current list of jobs, then grab the next
@@ -86,5 +84,8 @@ def linkedin_scrape_urls(conn: Connection):
             sleep(uniform(1.0, 3.0))
         browser.close()
 
-def linkedin_scraper(conn: Connection):
+def linkedin_extract_url_contents(conn: Connection) -> None:
+    return
+
+def linkedin_scraper(conn: Connection) -> None:
     linkedin_scrape_urls(conn)
