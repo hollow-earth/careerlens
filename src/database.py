@@ -37,13 +37,25 @@ def init_tables(conn: sqlite3.Connection) -> None:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS staging (
                 id INTEGER PRIMARY KEY,
+                source TEXT NOT NULL,
+                source_job_id TEXT NOT NULL,
+                url TEXT NOT NULL UNIQUE,
+                
                 title TEXT NOT NULL,
                 company TEXT NOT NULL,
                 description TEXT NOT NULL,
                 location TEXT NOT NULL,
-                source TEXT NOT NULL,
-                url TEXT NOT NULL UNIQUE,
                 redirects_to TEXT
+            )
+            """)
+        conn.commit()
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ingest (
+                id INTEGER PRIMARY KEY,
+                source TEXT NOT NULL,
+                source_job_id TEXT NOT NULL,
+                url TEXT NOT NULL UNIQUE,
             )
             """)
         conn.commit()
@@ -51,6 +63,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
         raise Exception("Version not found")
 
 def write_job_to_staging(conn: sqlite3.Connection, job: JobListing) -> None:
+    # TODO: update to reflect changes above
     cursor = conn.cursor()
     cursor.execute("""
         INSERT OR IGNORE INTO staging 
