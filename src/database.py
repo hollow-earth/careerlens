@@ -1,5 +1,6 @@
 import sqlite3
 from joblisting import JobListing
+from datetime import datetime
 
 def connect() -> sqlite3.Connection:
     return sqlite3.connect("./data/data.db")
@@ -72,8 +73,8 @@ def init_tables(conn: sqlite3.Connection) -> None:
 def write_job_to_staging(conn: sqlite3.Connection, job: JobListing) -> None:
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT OR IGNORE INTO staging 
-            (id, title, company, description, location, source, url)
+            INSERT OR IGNORE INTO staging 
+            (id, title, company, description, location, source, link)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
         (
@@ -83,8 +84,25 @@ def write_job_to_staging(conn: sqlite3.Connection, job: JobListing) -> None:
             job.description, 
             job.location, 
             job.source, 
-            job.link)
+            job.url
         )
+    )
+    conn.commit()
+
+def write_job_to_ingest(conn: sqlite3.Connection, source: str, job_id: str, url: str) -> None:
+    cursor = conn.cursor()
+    cursor.execute("""
+            INSERT OR IGNORE INTO ingest 
+            (source, job_id, url, scraped_at) 
+            VALUES (?, ?, ?, ?)
+        """,
+        (
+            source, 
+            job_id, 
+            url, 
+            datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        )
+    )
     conn.commit()
 
 def close(conn: sqlite3.Connection) -> None:
