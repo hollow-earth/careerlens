@@ -1,7 +1,7 @@
 import database
 import sqlite3
 from scrapers.linkedin import linkedin_scraper
-#def load_config():
+from playwright.sync_api import sync_playwright
 
 def main():
     try:
@@ -11,7 +11,10 @@ def main():
         raise
 
     database.init_tables(conn)
-    linkedin_scraper(conn)
+    with sync_playwright() as p:
+        browser = p.firefox.launch(headless=False) # TODO: switch to True when tests are over
+        linkedin_scraper(conn, browser)
+        browser.close()
     
     try:
         database.close(conn)
