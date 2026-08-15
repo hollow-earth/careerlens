@@ -65,7 +65,7 @@ def linkedin_scrape_urls(conn: Connection) -> None:
                 host = ".".join(domain_parts[-2:])
             scraped_url = urlunparse((parsed_url.scheme, host, 
                 parsed_url.path, '', '', ''))       # Strip useless tracking nonsense
-            match = search(r"jobs/view/(?:.+\-)?(\d+)/?", scraped_url)
+            match = search(r"jobs/view/.*?(\d+)/?$", scraped_url)
             assert match is not None, f"Regex failed to extract a Job ID from the URL: {scraped_url}"
             job_id = match.group(1).strip()
 
