@@ -62,8 +62,9 @@ def linkedin_scrape_urls(conn: Connection) -> None:
             assert match is not None, f"Regex failed to extract a Job ID from the URL: {scraped_url}"
             job_id = match.group(1).strip()
             scraped_url = f"https://www.linkedin.com/jobs/view/{job_id}"
-            
-            write_job_to_ingest(conn, "LinkedIn", job_id, scraped_url)
+
+            if not scraper_utilities.job_exists_in_pipeline(conn, "linkedin", job_id):
+                write_job_to_ingest(conn, "linkedin", job_id, scraped_url)
 
             i += 1
             # Load more jobs if needed, then update the current list of jobs, then grab the next
