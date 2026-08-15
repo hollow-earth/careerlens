@@ -2,10 +2,11 @@ from dataclasses import dataclass
 
 @dataclass
 class JobListing:
-    job_id: int
     title: str
     company: str
-    description: str
     location: str
+    description: str
     source: str
-    url: str
+    job_id: str
+    scraped_url: str
+    canonical_url: str

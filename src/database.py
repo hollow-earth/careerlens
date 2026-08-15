@@ -25,6 +25,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 canonical_url TEXT NOT NULL,
                 
                 status TEXT NOT NULL DEFAULT 'New',
+                scraped_at TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 applied_at TEXT,
@@ -76,22 +77,23 @@ def init_tables(conn: sqlite3.Connection) -> None:
     else:
         raise Exception("Version not found")
 
-# TODO: update the function according to the new fields
 def write_job_to_staging(conn: sqlite3.Connection, job: JobListing) -> None:
     cursor = conn.cursor()
     cursor.execute("""
             INSERT OR IGNORE INTO staging 
-            (id, title, company, description, location, source, link)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (title, company, location, description, source, job_id, scraped_url, canonical_url, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
-            job.job_id, 
             job.title, 
             job.company, 
-            job.description, 
             job.location, 
+            job.description, 
             job.source, 
-            job.url
+            job.job_id,
+            job.scraped_url,
+            job.canonical_url,
+            datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
     )
     conn.commit()
