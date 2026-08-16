@@ -53,6 +53,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 scraped_url TEXT NOT NULL,
                 canonical_url TEXT NOT NULL,
 
+                scraped_at TEXT NOT NULL,
                 created_at TEXT NOT NULL,
 
                 UNIQUE(source, job_id, canonical_url)

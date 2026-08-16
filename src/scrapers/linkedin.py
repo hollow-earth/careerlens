@@ -5,6 +5,7 @@ from random import uniform
 from sqlite3 import Connection
 from database import write_job_to_ingest
 import scrapers.scraper_utilities as scraper_utilities
+from joblisting import JobListing
 
 def linkedin_scrape_urls(conn: Connection, browser: Browser) -> None:
     # Load config and throw everything into a search query
@@ -75,12 +76,32 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser) -> None:
         i += 1
         sleep(uniform(1.0, 3.0))
 
-def linkedin_extract_url_contents(conn: Connection) -> None:
-    return
+def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
+    page = browser.new_page()
+    while True:
+        row = scraper_utilities.get_next_ingest(conn, "linkedin")
+        if row is None:
+            break
+        id = row["id"]
+        source = row["source"]
+        job_id = row["job_id"]
+        scraped_url = row["scraped_url"]
+        scraped_at = row["scraped_at"]
+        print(scraped_url)
+        
+        page.goto(scraped_url)
+        dismiss_button = page.get_by_role("button", name="Dismiss")
+        if dismiss_button.count() and dismiss_button.is_visible():
+            dismiss_button.click()
+        # title TEXT NOT NULL,
+        # company TEXT NOT NULL,
+        # location TEXT NOT NULL,
+        # description TEXT NOT NULL,
+        # canonical_url TEXT NOT NULL,
+        # created_at TEXT NOT NULL,
+        input()
+    page.close()
 
 def linkedin_scraper(conn: Connection, browser: Browser) -> None:
-        linkedin_scrape_urls(conn, browser)
-        cursor = conn.execute("""
-            FROM 
-            """
-        )
+        # linkedin_scrape_urls(conn, browser)
+        linkedin_extract_url_contents(conn, browser)

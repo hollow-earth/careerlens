@@ -46,3 +46,22 @@ def job_exists_in_pipeline(conn: Connection, source: str, job_id: str, canonical
             (canonical_url, canonical_url, canonical_url)
         )
     return cursor.fetchone() is not None
+
+def get_next_ingest(conn, source):
+    return conn.execute("""
+        SELECT * FROM ingest
+        WHERE source = ?
+        ORDER BY id
+        LIMIT 1
+        """, 
+        (source,)
+    ).fetchone()
+
+def delete_ingest(conn, ingest_id):
+    conn.execute("""
+        DELETE FROM ingest 
+        WHERE id = ?
+        """,
+        (ingest_id,)
+    )
+    conn.commit()
