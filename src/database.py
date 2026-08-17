@@ -21,8 +21,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 description TEXT NOT NULL,
                 source TEXT NOT NULL,
                 job_id TEXT NOT NULL,
-                scraped_url TEXT NOT NULL,
-                canonical_url TEXT NOT NULL,
+                url TEXT NOT NULL,
                 
                 status TEXT NOT NULL DEFAULT 'New',
                 scraped_at TEXT NOT NULL,
@@ -35,7 +34,8 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 short_score TEXT,
                 reasoning TEXT,
 
-                UNIQUE(source, job_id, canonical_url)
+                UNIQUE(source, job_id)
+                UNIQUE(url)
             )
             """)
         conn.commit()
@@ -50,13 +50,14 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 description TEXT NOT NULL,
                 source TEXT NOT NULL,
                 job_id TEXT NOT NULL,
-                scraped_url TEXT NOT NULL,
-                canonical_url TEXT NOT NULL,
+                url TEXT NOT NULL,
 
+                status TEXT NOT NULL DEFAULT 'pending',
                 scraped_at TEXT NOT NULL,
                 created_at TEXT NOT NULL,
 
-                UNIQUE(source, job_id, canonical_url)
+                UNIQUE(source, job_id)
+                UNIQUE(url)
             )
             """)
         conn.commit()
@@ -67,11 +68,12 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 
                 source TEXT NOT NULL,
                 job_id TEXT NOT NULL,
-                scraped_url TEXT NOT NULL UNIQUE,
+                url TEXT NOT NULL UNIQUE,
 
                 scraped_at TEXT NOT NULL,
 
-                UNIQUE(source, job_id, scraped_url)
+                UNIQUE(source, job_id)
+                UNIQUE(url)
             )
             """)
         conn.commit()
@@ -82,7 +84,7 @@ def write_job_to_staging(conn: sqlite3.Connection, job: JobListing) -> None:
     cursor = conn.cursor()
     cursor.execute("""
             INSERT OR IGNORE INTO staging 
-            (title, company, location, description, source, job_id, scraped_url, canonical_url, created_at)
+            (title, company, location, description, source, job_id, url, canonical_url, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
@@ -92,24 +94,23 @@ def write_job_to_staging(conn: sqlite3.Connection, job: JobListing) -> None:
             job.description, 
             job.source, 
             job.job_id,
-            job.scraped_url,
-            job.canonical_url,
+            job.url,
             datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
     )
     conn.commit()
 
-def write_job_to_ingest(conn: sqlite3.Connection, source: str, job_id: str, scraped_url: str) -> None:
+def write_job_to_ingest(conn: sqlite3.Connection, source: str, job_id: str, url: str) -> None:
     cursor = conn.cursor()
     cursor.execute("""
             INSERT OR IGNORE INTO ingest 
-            (source, job_id, scraped_url, scraped_at) 
+            (source, job_id, url, scraped_at) 
             VALUES (?, ?, ?, ?)
         """,
         (
             source, 
             job_id, 
-            scraped_url, 
+            url, 
             datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
     )

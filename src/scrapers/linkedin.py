@@ -85,11 +85,11 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
         id = row["id"]
         source = row["source"]
         job_id = row["job_id"]
-        scraped_url = row["scraped_url"]
+        url = row["scraped_url"]
         scraped_at = row["scraped_at"]
-        print(scraped_url)
+        print(url)
         
-        page.goto(scraped_url)
+        page.goto(url)
         dismiss_button = page.get_by_role("button", name="Dismiss")
         if dismiss_button.count() and dismiss_button.is_visible():
             dismiss_button.click()
@@ -97,7 +97,6 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
         # company TEXT NOT NULL,
         # location TEXT NOT NULL,
         # description TEXT NOT NULL,
-        # canonical_url TEXT NOT NULL,
         # created_at TEXT NOT NULL,
         input()
     page.close()

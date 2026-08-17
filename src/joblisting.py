@@ -8,5 +8,4 @@ class JobListing:
     description: str
     source: str
     job_id: str
-    scraped_url: str
-    canonical_url: str
+    url: str
