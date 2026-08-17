@@ -104,7 +104,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 reasoning TEXT,
 
                 discard_reason TEXT NOT NULL,
-                discarded_at TEXT NOT NULL
+                discarded_at TEXT NOT NULL,
                 
                 UNIQUE(source, job_id)
                 UNIQUE(url)
