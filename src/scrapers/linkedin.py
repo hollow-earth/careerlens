@@ -99,7 +99,9 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
         title = posting.locator(".top-card-layout__title").inner_text().strip()
         company = posting.locator(".topcard__org-name-link").inner_text().strip()
         if company.lower() in scraper_utilities.company_blacklist:
-            ...
+            with conn:
+                database.write_job_to_discarded(conn, source, job_id, url, "Match in blacklisted_companies", title, company)
+                database.delete_from_ingest(conn, row_id)
 
         location = posting.locator(".topcard__flavor-row").locator(".topcard__flavor--bullet").first.inner_text().strip()
         description = posting.locator(".show-more-less-html__markup").inner_text().strip()
@@ -113,10 +115,11 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
         except:
             raise Exception("Couldn't move row from ingest to staging!")
         sleep(uniform(3.0, 5.0))
+        input()
         
     page.close()
 
 def linkedin_scraper(conn: Connection, browser: Browser) -> None:
         # linkedin_scrape_urls(conn, browser)
-        # linkedin_extract_url_contents(conn, browser)
+        linkedin_extract_url_contents(conn, browser)
         ...
