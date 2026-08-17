@@ -77,6 +77,37 @@ def init_tables(conn: sqlite3.Connection) -> None:
             )
             """)
         conn.commit()
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS discarded (
+                id INTEGER PRIMARY KEY,
+
+                title TEXT,
+                company TEXT,
+                location TEXT,
+                description TEXT,
+                source TEXT,
+                job_id TEXT,
+                url TEXT,
+                
+                status TEXT,
+                scraped_at TEXT,
+                created_at TEXT,
+                updated_at TEXT,
+                applied_at TEXT,
+                resume_used TEXT,
+    
+                score INTEGER,
+                short_score TEXT,
+                reasoning TEXT,
+
+                discard_reason TEXT NOT NULL,
+                
+                UNIQUE(source, job_id)
+                UNIQUE(url)
+            )
+            """)
+        conn.commit()
     else:
         raise Exception("Version not found")
 
@@ -116,6 +147,43 @@ def write_job_to_ingest(conn: sqlite3.Connection, source: str, job_id: str, url:
         )
     )
     conn.commit()
+
+def get_next_ingest(conn: sqlite3.Connection, source: str):
+    return conn.execute("""
+        SELECT * FROM ingest
+        WHERE source = ?
+        ORDER BY id
+        LIMIT 1
+        """, 
+        (source,)
+    ).fetchone()
+
+def delete_ingest(conn: sqlite3.Connection, ingest_id: str):
+    conn.execute("""
+        DELETE FROM ingest 
+        WHERE id = ?
+        """,
+        (ingest_id,)
+    )
+    conn.commit()
+
+def job_exists_in_pipeline(conn: sqlite3.Connection, source: str, job_id: str, url: str) -> bool:
+    cursor = conn.execute("""
+        SELECT 1 FROM ingest
+            WHERE (source = ? AND job_id = ?) OR url = ?
+        UNION ALL
+        SELECT 1 FROM staging
+            WHERE (source = ? AND job_id = ?) OR url = ?
+        UNION ALL
+        SELECT 1 FROM jobs
+            WHERE (source = ? AND job_id = ?) OR url = ?
+        LIMIT 1
+        """,
+        (source, job_id, url,
+        source, job_id, url,
+        source, job_id, url)
+    )
+    return cursor.fetchone() is not None
 
 def close(conn: sqlite3.Connection) -> None:
     conn.close()

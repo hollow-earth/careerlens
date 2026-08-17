@@ -4,7 +4,7 @@ from playwright.sync_api import Browser
 from time import sleep
 from random import uniform
 from sqlite3 import Connection
-from database import write_job_to_ingest, write_job_to_staging
+import database
 import scrapers.scraper_utilities as scraper_utilities
 from joblisting import StagingJobListing
 from datetime import datetime
@@ -63,8 +63,8 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser) -> None:
         scraped_url = f"https://www.linkedin.com/jobs/view/{job_id}"
         
         # If it already exists in ingest, staging, or jobs, skip adding to ingest
-        if not scraper_utilities.job_exists_in_pipeline(conn, "linkedin", job_id, scraped_url):
-            write_job_to_ingest(conn, "linkedin", job_id, scraped_url)
+        if not database.job_exists_in_pipeline(conn, "linkedin", job_id, scraped_url):
+            database.write_job_to_ingest(conn, "linkedin", job_id, scraped_url)
         
         # Load more jobs if needed, then update the current list of jobs, then grab the next
         show_more_jobs_button = page.locator(".infinite-scroller__show-more-button")
@@ -81,7 +81,7 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser) -> None:
 def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
     page = browser.new_page()
     while True:
-        row = scraper_utilities.get_next_ingest(conn, "linkedin")
+        row = database.get_next_ingest(conn, "linkedin")
         if row is None:
             break
         row_id = row["id"]
@@ -97,8 +97,9 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
         posting = page.locator(".details")
         title = posting.locator(".top-card-layout__title").inner_text().strip()
         company = posting.locator(".topcard__org-name-link").inner_text().strip()
-        if company in scraper_utilities.company_blacklist:
+        if company.lower() in scraper_utilities.company_blacklist:
             ...
+
         location = posting.locator(".topcard__flavor-row").locator(".topcard__flavor--bullet").first.inner_text().strip()
         description = posting.locator(".show-more-less-html__markup").inner_text().strip()
         
@@ -106,8 +107,8 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
             source=source, job_id=job_id, url=url, status="pending", scraped_at=scraped_at)
         try:
             with conn:
-                write_job_to_staging(conn=conn, job=job_obj)
-                scraper_utilities.delete_ingest(conn=conn, ingest_id=row_id)
+                database.write_job_to_staging(conn=conn, job=job_obj)
+                database.delete_ingest(conn=conn, ingest_id=row_id)
         except:
             raise Exception("Couldn't move row from ingest to staging!")
         sleep(uniform(3.0, 5.0))
@@ -116,4 +117,5 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
 
 def linkedin_scraper(conn: Connection, browser: Browser) -> None:
         # linkedin_scrape_urls(conn, browser)
-        linkedin_extract_url_contents(conn, browser)
+        # linkedin_extract_url_contents(conn, browser)
+        ...
