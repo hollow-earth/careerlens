@@ -1,5 +1,5 @@
 import sqlite3
-from joblisting import JobListing
+from joblisting import StagingJobListing
 from datetime import datetime
 
 def connect() -> sqlite3.Connection:
@@ -80,25 +80,26 @@ def init_tables(conn: sqlite3.Connection) -> None:
     else:
         raise Exception("Version not found")
 
-def write_job_to_staging(conn: sqlite3.Connection, job: JobListing) -> None:
+def write_job_to_staging(conn: sqlite3.Connection, job: StagingJobListing) -> None:
     cursor = conn.cursor()
     cursor.execute("""
             INSERT OR IGNORE INTO staging 
-            (title, company, location, description, source, job_id, url, canonical_url, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (title, company, location, description, source, job_id, url, status, scraped_at, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
-            job.title, 
-            job.company, 
-            job.location, 
-            job.description, 
-            job.source, 
+            job.title,
+            job.company,
+            job.location,
+            job.description,
+            job.source,
             job.job_id,
             job.url,
+            job.status,
+            job.scraped_at,
             datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
     )
-    conn.commit()
 
 def write_job_to_ingest(conn: sqlite3.Connection, source: str, job_id: str, url: str) -> None:
     cursor = conn.cursor()

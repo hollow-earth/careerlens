@@ -1,11 +1,13 @@
 from re import search
+from venv import create
 from playwright.sync_api import Browser
 from time import sleep
 from random import uniform
 from sqlite3 import Connection
-from database import write_job_to_ingest
+from database import write_job_to_ingest, write_job_to_staging
 import scrapers.scraper_utilities as scraper_utilities
-from joblisting import JobListing
+from joblisting import StagingJobListing
+from datetime import datetime
 
 def linkedin_scrape_urls(conn: Connection, browser: Browser) -> None:
     # Load config and throw everything into a search query
@@ -82,23 +84,34 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
         row = scraper_utilities.get_next_ingest(conn, "linkedin")
         if row is None:
             break
-        id = row["id"]
+        row_id = row["id"]
         source = row["source"]
         job_id = row["job_id"]
         url = row["url"]
         scraped_at = row["scraped_at"]
-        print(url)
-        
+
         page.goto(url)
         dismiss_button = page.get_by_role("button", name="Dismiss")
         if dismiss_button.count() and dismiss_button.is_visible():
             dismiss_button.click()
-        # title TEXT NOT NULL,
-        # company TEXT NOT NULL,
-        # location TEXT NOT NULL,
-        # description TEXT NOT NULL,
-        # created_at TEXT NOT NULL,
-        input()
+        posting = page.locator(".details")
+        title = posting.locator(".top-card-layout__title").inner_text().strip()
+        company = posting.locator(".topcard__org-name-link").inner_text().strip()
+        if company in scraper_utilities.company_blacklist:
+            ...
+        location = posting.locator(".topcard__flavor-row").locator(".topcard__flavor--bullet").first.inner_text().strip()
+        description = posting.locator(".show-more-less-html__markup").inner_text().strip()
+        
+        job_obj = StagingJobListing(title=title, company=company, location=location, description=description, 
+            source=source, job_id=job_id, url=url, status="pending", scraped_at=scraped_at)
+        try:
+            with conn:
+                write_job_to_staging(conn=conn, job=job_obj)
+                scraper_utilities.delete_ingest(conn=conn, ingest_id=row_id)
+        except:
+            raise Exception("Couldn't move row from ingest to staging!")
+        sleep(uniform(3.0, 5.0))
+        
     page.close()
 
 def linkedin_scraper(conn: Connection, browser: Browser) -> None:
