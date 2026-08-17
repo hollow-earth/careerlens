@@ -64,7 +64,8 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser) -> None:
         
         # If it already exists in ingest, staging, or jobs, skip adding to ingest
         if not database.job_exists_in_pipeline(conn, "linkedin", job_id, scraped_url):
-            database.write_job_to_ingest(conn, "linkedin", job_id, scraped_url)
+            with conn:
+                database.write_job_to_ingest(conn, "linkedin", job_id, scraped_url)
         
         # Load more jobs if needed, then update the current list of jobs, then grab the next
         show_more_jobs_button = page.locator(".infinite-scroller__show-more-button")
@@ -108,7 +109,7 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
         try:
             with conn:
                 database.write_job_to_staging(conn=conn, job=job_obj)
-                database.delete_ingest(conn=conn, ingest_id=row_id)
+                database.delete_from_ingest(conn=conn, ingest_id=row_id)
         except:
             raise Exception("Couldn't move row from ingest to staging!")
         sleep(uniform(3.0, 5.0))

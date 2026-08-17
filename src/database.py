@@ -1,4 +1,6 @@
+from posix import stat
 import sqlite3
+from turtle import update
 from joblisting import StagingJobListing
 from datetime import datetime
 
@@ -86,9 +88,9 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 company TEXT,
                 location TEXT,
                 description TEXT,
-                source TEXT,
-                job_id TEXT,
-                url TEXT,
+                source TEXT NOT NULL,
+                job_id TEXT NOT NULL,
+                url TEXT NOT NULL,
                 
                 status TEXT,
                 scraped_at TEXT,
@@ -102,6 +104,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 reasoning TEXT,
 
                 discard_reason TEXT NOT NULL,
+                discarded_at TEXT NOT NULL
                 
                 UNIQUE(source, job_id)
                 UNIQUE(url)
@@ -146,9 +149,47 @@ def write_job_to_ingest(conn: sqlite3.Connection, source: str, job_id: str, url:
             datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
     )
-    conn.commit()
 
-def get_next_ingest(conn: sqlite3.Connection, source: str) -> None:
+def write_job_to_discarded(conn: sqlite3.Connection, 
+        source: str, job_id: str, url: str, discard_reason: str,
+        title: str | None = None, company: str | None = None, location: str | None = None, description: str | None = None,
+        status: str | None = None, scraped_at: str | None = None, created_at: str | None = None,
+        updated_at: str | None = None, applied_at: str | None = None, resume_used: str | None = None,
+        score: int | None = None, short_score: str | None = None, reasoning: str | None = None
+    ) -> None:
+    cursor = conn.cursor()
+    _ = cursor.execute("""
+            INSERT OR IGNORE INTO discarded 
+            (source, job_id, url, discard_reason, discarded_at,
+            title, company, location, description, 
+            status, scraped_at, created_at, 
+            updated_at, applied_at, resume_used, 
+            score, short_score, reasoning)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            source,
+            job_id,
+            url,
+            discard_reason,
+            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            title,
+            company,
+            location,
+            description,
+            status,
+            scraped_at,
+            created_at,
+            updated_at,
+            applied_at,
+            resume_used,
+            score,
+            short_score,
+            reasoning,
+        )
+    )
+
+def get_next_ingest(conn: sqlite3.Connection, source: str) -> sqlite3.Row | None:
     return conn.execute("""
         SELECT * FROM ingest
         WHERE source = ?
@@ -158,7 +199,7 @@ def get_next_ingest(conn: sqlite3.Connection, source: str) -> None:
         (source,)
     ).fetchone()
 
-def delete_ingest(conn: sqlite3.Connection, ingest_id: str) -> None:
+def delete_from_ingest(conn: sqlite3.Connection, ingest_id: str) -> None:
     conn.execute("""
         DELETE FROM ingest 
         WHERE id = ?
@@ -177,8 +218,13 @@ def job_exists_in_pipeline(conn: sqlite3.Connection, source: str, job_id: str, u
         SELECT 1 FROM jobs
             WHERE (source = ? AND job_id = ?) OR url = ?
         LIMIT 1
+        UNION ALL
+        SELECT 1 FROM discarded
+            WHERE (source = ? AND job_id = ?) OR url = ?
+        LIMIT 1
         """,
         (source, job_id, url,
+        source, job_id, url,
         source, job_id, url,
         source, job_id, url)
     )
