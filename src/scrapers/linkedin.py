@@ -85,7 +85,7 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
         id = row["id"]
         source = row["source"]
         job_id = row["job_id"]
-        url = row["scraped_url"]
+        url = row["url"]
         scraped_at = row["scraped_at"]
         print(url)
         
