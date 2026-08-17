@@ -61,7 +61,7 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser) -> None:
         scraped_url = f"https://www.linkedin.com/jobs/view/{job_id}"
         
         # If it already exists in ingest, staging, or jobs, skip adding to ingest
-        if not scraper_utilities.job_exists_in_pipeline(conn, "linkedin", job_id):
+        if not scraper_utilities.job_exists_in_pipeline(conn, "linkedin", job_id, scraped_url):
             write_job_to_ingest(conn, "linkedin", job_id, scraped_url)
         
         # Load more jobs if needed, then update the current list of jobs, then grab the next
