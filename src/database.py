@@ -148,7 +148,7 @@ def write_job_to_ingest(conn: sqlite3.Connection, source: str, job_id: str, url:
     )
     conn.commit()
 
-def get_next_ingest(conn: sqlite3.Connection, source: str):
+def get_next_ingest(conn: sqlite3.Connection, source: str) -> None:
     return conn.execute("""
         SELECT * FROM ingest
         WHERE source = ?
@@ -158,7 +158,7 @@ def get_next_ingest(conn: sqlite3.Connection, source: str):
         (source,)
     ).fetchone()
 
-def delete_ingest(conn: sqlite3.Connection, ingest_id: str):
+def delete_ingest(conn: sqlite3.Connection, ingest_id: str) -> None:
     conn.execute("""
         DELETE FROM ingest 
         WHERE id = ?
