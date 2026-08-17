@@ -165,7 +165,6 @@ def delete_ingest(conn: sqlite3.Connection, ingest_id: str) -> None:
         """,
         (ingest_id,)
     )
-    conn.commit()
 
 def job_exists_in_pipeline(conn: sqlite3.Connection, source: str, job_id: str, url: str) -> bool:
     cursor = conn.execute("""
