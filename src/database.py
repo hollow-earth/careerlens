@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 
-from scrapers.scraper_utilities import JobListing, StagingJobListing
+from scrapers.scraper_utilities import JobListing, JobData, JobStatus
 
 
 def connect() -> sqlite3.Connection:
@@ -28,7 +28,6 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 url TEXT NOT NULL,
                 
                 status TEXT NOT NULL DEFAULT 'New',
-                scraped_at TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 applied_at TEXT,
@@ -42,7 +41,6 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 UNIQUE(url)
             )
             """)
-        conn.commit()
 
         _ = cursor.execute("""
             CREATE TABLE IF NOT EXISTS staging (
@@ -57,14 +55,12 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 url TEXT NOT NULL,
 
                 status TEXT NOT NULL DEFAULT 'pending',
-                scraped_at TEXT NOT NULL,
                 created_at TEXT NOT NULL,
 
                 UNIQUE(source, job_id)
                 UNIQUE(url)
             )
             """)
-        conn.commit()
 
         _ = cursor.execute("""
             CREATE TABLE IF NOT EXISTS ingest (
@@ -74,13 +70,10 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 job_id TEXT NOT NULL,
                 url TEXT NOT NULL UNIQUE,
 
-                scraped_at TEXT NOT NULL,
-
                 UNIQUE(source, job_id)
                 UNIQUE(url)
             )
             """)
-        conn.commit()
 
         _ = cursor.execute("""
             CREATE TABLE IF NOT EXISTS discarded (
@@ -95,7 +88,6 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 url TEXT NOT NULL,
                 
                 status TEXT,
-                scraped_at TEXT,
                 created_at TEXT,
                 updated_at TEXT,
                 applied_at TEXT,
@@ -116,12 +108,12 @@ def init_tables(conn: sqlite3.Connection) -> None:
     else:
         raise Exception("Version not found")
 
-def write_job_to_staging(conn: sqlite3.Connection, job: StagingJobListing) -> None:
+def write_job_to_staging(conn: sqlite3.Connection, job: JobData) -> None:
     cursor = conn.cursor()
     _ = cursor.execute("""
             INSERT OR IGNORE INTO staging 
-            (title, company, location, description, source, job_id, url, status, scraped_at, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (title, company, location, description, source, job_id, url, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             job.title,
@@ -131,8 +123,7 @@ def write_job_to_staging(conn: sqlite3.Connection, job: StagingJobListing) -> No
             job.source,
             job.job_id,
             job.url,
-            job.status,
-            job.scraped_at,
+            JobStatus.PENDING.value,
             datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
     )
@@ -141,46 +132,48 @@ def write_job_to_ingest(conn: sqlite3.Connection, source: str, job_id: str, url:
     cursor = conn.cursor()
     _ = cursor.execute("""
             INSERT OR IGNORE INTO ingest 
-            (source, job_id, url, scraped_at) 
-            VALUES (?, ?, ?, ?)
+            (source, job_id, url) 
+            VALUES (?, ?, ?)
         """,
         (
             source, 
             job_id, 
-            url, 
-            datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            url
         )
     )
 
-def write_job_to_discarded(conn: sqlite3.Connection, 
-        source: str, job_id: str, url: str, discard_reason: str,
-        title: str | None = None, company: str | None = None, location: str | None = None, description: str | None = None,
-        status: str | None = None, scraped_at: str | None = None, created_at: str | None = None,
-        updated_at: str | None = None, applied_at: str | None = None, resume_used: str | None = None,
-        score: int | None = None, short_score: str | None = None, reasoning: str | None = None
-    ) -> None:
+def write_job_to_discarded(conn: sqlite3.Connection, job: JobData, discard_reason: str, 
+    created_at: str, updated_at: str | None = None, applied_at: str | None = None) -> None:
+    if isinstance(job, JobListing):
+        resume_used = job.resume_used
+        score = job.score
+        short_score = job.short_score
+        reasoning = job.reasoning
+    else:
+        resume_used = None
+        score = None
+        short_score = None
+        reasoning = None
+
     cursor = conn.cursor()
     _ = cursor.execute("""
             INSERT OR IGNORE INTO discarded 
-            (source, job_id, url, discard_reason, discarded_at,
-            title, company, location, description, 
-            status, scraped_at, created_at, 
-            updated_at, applied_at, resume_used, 
-            score, short_score, reasoning)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (
+            title, company, location, description, source, job_id, url,
+            status, created_at, updated_at, applied_at, resume_used, 
+            score, short_score, reasoning,
+            discard_reason, discarded_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
-            source,
-            job_id,
-            url,
-            discard_reason,
-            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            title,
-            company,
-            location,
-            description,
-            status,
-            scraped_at,
+            job.title,
+            job.company,
+            job.location,
+            job.description,
+            job.source,
+            job.job_id,
+            job.url,
+            JobStatus.DISCARDED.value,
             created_at,
             updated_at,
             applied_at,
@@ -188,6 +181,8 @@ def write_job_to_discarded(conn: sqlite3.Connection,
             score,
             short_score,
             reasoning,
+            discard_reason,
+            datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
     )
 
@@ -248,13 +243,13 @@ def delete_from_staging(conn: sqlite3.Connection, staging_id: str) -> None:
         (staging_id,)
     )
 
-def write_job_to_jobs(conn: sqlite3.Connection, job: JobListing) -> None:
+def write_job_to_jobs(conn: sqlite3.Connection, job: JobListing, created_at: str) -> None:
     cursor = conn.cursor()
     _ = cursor.execute("""
             INSERT OR IGNORE INTO jobs 
-            (title, company, location, description, source, job_id, url, status, scraped_at, created_at,
+            (title, company, location, description, source, job_id, url, status, created_at,
             updated_at, applied_at, resume_used, score, short_score, reasoning)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             job.title,
@@ -264,12 +259,11 @@ def write_job_to_jobs(conn: sqlite3.Connection, job: JobListing) -> None:
             job.source,
             job.job_id,
             job.url,
-            job.status,
-            job.scraped_at,
-            job.created_at,
+            JobStatus.PENDING_MANUAL_REVIEW.value,
+            created_at,
             datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
-            job.applied_at,
-            job.resume_used,
+            None,
+            None,
             job.score,
             job.short_score,
             job.reasoning
