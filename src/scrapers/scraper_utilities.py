@@ -1,11 +1,8 @@
 import re
 import unicodedata
 
-from tomllib import load
 from typing_extensions import Any
 
-with open("config.toml", "rb") as f:
-    toml_config = load(f)
 
 def normalize(text: str) -> str:
     return "".join(
@@ -13,16 +10,15 @@ def normalize(text: str) -> str:
         if unicodedata.category(c) != "Mn"
     )
 
-term_blacklist = {normalize(term) for term in toml_config["search"]["blacklisted_terms"]}
-excluded_pattern = re.compile(r"\b(?:" + "|".join(re.escape(term) for term in term_blacklist) + r")\b")
+class JobFilters:
+    def __init__(self, config: dict[str, Any]) -> None:
+        self.term_blacklist = {normalize(term) for term in config["search"]["blacklisted_terms"]}
+        self.excluded_pattern = re.compile(r"\b(?:" + "|".join(re.escape(term) for term in self.term_blacklist) + r")\b")
+        
+        self.company_blacklist = {normalize(company) for company in config["search"]["blacklisted_companies"]}
 
-company_blacklist = {normalize(company) for company in toml_config["search"]["blacklisted_companies"]}
-
-def load_config() -> dict[str, Any]:
-    return toml_config
-
-def is_title_blacklisted(title: str) -> bool:
-    return excluded_pattern.search(normalize(title)) is not None
-
-def is_company_blacklisted(company: str) -> bool:
-    return company.lower() in company_blacklist
+    def is_title_blacklisted(self, title: str) -> bool:
+        return self.excluded_pattern.search(normalize(title)) is not None
+    
+    def is_company_blacklisted(self, company: str) -> bool:
+        return company.lower() in self.company_blacklist

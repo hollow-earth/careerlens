@@ -4,13 +4,14 @@ from sqlite3 import Connection
 from time import sleep
 
 from playwright.sync_api import Browser
+from typing_extensions import Any
 
 import database
 from joblisting import StagingJobListing
 from scrapers import scraper_utilities
 
 
-def linkedin_scrape_urls(conn: Connection, browser: Browser) -> None:
+def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, Any]) -> None:
     page_delay = uniform(1.0, 3.0)
 
     # Load config and throw everything into a search query
@@ -87,7 +88,8 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser) -> None:
         sleep(page_delay)
     page.close()
 
-def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
+
+def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:scraper_utilities.JobFilters) -> None:
     page_delay = uniform(3.0, 5.0)
     page = browser.new_page()
     while True:
@@ -162,6 +164,7 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
 
     page.close()
 
-def linkedin_scraper(conn: Connection, browser: Browser) -> None:
-    linkedin_scrape_urls(conn, browser)
-    linkedin_extract_url_contents(conn, browser)
+
+def linkedin_scraper(conn: Connection, browser: Browser, config: dict[str, Any], filters: scraper_utilities.JobFilters) -> None:
+    linkedin_scrape_urls(conn, browser, config)
+    linkedin_extract_url_contents(conn, browser, filters)
