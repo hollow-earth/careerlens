@@ -20,9 +20,47 @@ distance = 0
 
 [llm]
 model = "gemma4"
-
-[ranking]
 minimum_score = 75
 
-[resume]
-text = "Paste text for the resume here"
+career_goals = "Become the best programmer ever, maximize income, etc."
+preferred_roles = [
+    "Software Engineer",
+    "Backend Engineer",
+    "Systems Engineer",
+    "DevOps Engineer",
+    "SRE",
+    "Infrastructure Engineer",
+]
+preferred_technologies = [
+    "Linux",
+    "Python",
+    "C++",
+    "Docker",
+    "Kubernetes",
+    "AWS",
+]
+excluded_roles = [
+    "Frontend Developer",
+    "UI Developer",
+]
+preferred_industries = [
+    "aerospace",
+    "defense",
+    "infrastructure",
+    "systems",
+]
+priorities = [
+    "Programming-heavy work",
+    "Opportunities for technical growth",
+    "Strong compensation",
+    "Interesting technical problems",
+    "Backend/infrastructure work",
+]
+dealbreakers = [
+    "Primarily frontend development",
+    "Primarily manual QA/testing",
+    "Unpaid work",
+]
+resume = """
+Paste text for the resume here
+"""
