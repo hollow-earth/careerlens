@@ -23,7 +23,6 @@ def load_config() -> dict[str, Any]:
 
 def is_title_blacklisted(title: str) -> bool:
     return excluded_pattern.search(normalize(title)) is not None
-        
 
 def is_company_blacklisted(company: str) -> bool:
     return company.lower() in company_blacklist

@@ -87,7 +87,6 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser) -> None:
         sleep(page_delay)
     page.close()
 
-
 def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
     page_delay = uniform(3.0, 5.0)
     page = browser.new_page()
@@ -162,7 +161,6 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
         sleep(page_delay)
 
     page.close()
-
 
 def linkedin_scraper(conn: Connection, browser: Browser) -> None:
     linkedin_scrape_urls(conn, browser)
