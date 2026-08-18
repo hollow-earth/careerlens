@@ -19,7 +19,6 @@ time_filter = 86400
 distance = 0
 
 [llm]
-provider = "ollama"
 model = "gemma4"
 
 [ranking]
