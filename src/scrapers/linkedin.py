@@ -10,6 +10,8 @@ from joblisting import StagingJobListing
 from datetime import datetime
 
 def linkedin_scrape_urls(conn: Connection, browser: Browser) -> None:
+    page_delay = uniform(1.0, 3.0)
+    
     # Load config and throw everything into a search query
     config = scraper_utilities.load_config()
 
@@ -73,13 +75,15 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser) -> None:
             if dismiss_button.count() and dismiss_button.is_visible():
                 dismiss_button.click()
             show_more_jobs_button.click()
-            sleep(uniform(1.0, 3.0))
+            sleep(page_delay)
         job_cards = page.locator("ul.jobs-search__results-list > li")
         count = job_cards.count()
         i += 1
-        sleep(uniform(1.0, 3.0))
+        sleep(page_delay)
+    page.close()
 
 def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
+    page_delay = uniform(3.0, 5.0)
     page = browser.new_page()
     while True:
         row = database.get_next_ingest(conn, "linkedin")
@@ -97,11 +101,20 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
             dismiss_button.click()
         posting = page.locator(".details")
         title = posting.locator(".top-card-layout__title").inner_text().strip()
+        if scraper_utilities.is_title_blacklisted(title):
+            with conn:
+                database.write_job_to_discarded(conn, source, job_id, url, "Match in blacklisted_terms", title)
+                database.delete_from_ingest(conn, row_id)
+            sleep(page_delay)
+            continue
+
         company = posting.locator(".topcard__org-name-link").inner_text().strip()
-        if company.lower() in scraper_utilities.company_blacklist:
+        if scraper_utilities.is_company_blacklisted(company):
             with conn:
                 database.write_job_to_discarded(conn, source, job_id, url, "Match in blacklisted_companies", title, company)
                 database.delete_from_ingest(conn, row_id)
+            sleep(page_delay)
+            continue
 
         location = posting.locator(".topcard__flavor-row").locator(".topcard__flavor--bullet").first.inner_text().strip()
         description = posting.locator(".show-more-less-html__markup").inner_text().strip()
@@ -114,12 +127,11 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser) -> None:
                 database.delete_from_ingest(conn=conn, ingest_id=row_id)
         except:
             raise Exception("Couldn't move row from ingest to staging!")
-        sleep(uniform(3.0, 5.0))
-        input()
+        sleep(page_delay)
         
     page.close()
 
 def linkedin_scraper(conn: Connection, browser: Browser) -> None:
-        # linkedin_scrape_urls(conn, browser)
+        linkedin_scrape_urls(conn, browser)
         linkedin_extract_url_contents(conn, browser)
-        ...
+        

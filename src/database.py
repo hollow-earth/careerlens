@@ -217,7 +217,6 @@ def job_exists_in_pipeline(conn: sqlite3.Connection, source: str, job_id: str, u
         UNION ALL
         SELECT 1 FROM jobs
             WHERE (source = ? AND job_id = ?) OR url = ?
-        LIMIT 1
         UNION ALL
         SELECT 1 FROM discarded
             WHERE (source = ? AND job_id = ?) OR url = ?
