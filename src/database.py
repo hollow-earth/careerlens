@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 
-from joblisting import StagingJobListing, JobListing
+from scrapers.scraper_utilities import JobListing, StagingJobListing
 
 
 def connect() -> sqlite3.Connection:

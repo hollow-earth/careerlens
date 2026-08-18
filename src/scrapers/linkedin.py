@@ -7,15 +7,11 @@ from playwright.sync_api import Browser
 from typing_extensions import Any
 
 import database
-from joblisting import StagingJobListing
 from scrapers import scraper_utilities
 
 
 def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, Any]) -> None:
     page_delay = uniform(1.0, 3.0)
-
-    # Load config and throw everything into a search query
-    config = scraper_utilities.load_config()
 
     # TODO: put that in scraper_utilities
     keywords = " OR ".join(f'"{item}"' for item in config["search"]["keywords"])
@@ -108,31 +104,7 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:sc
             dismiss_button.click()
         posting = page.locator(".details")
         title = posting.locator(".top-card-layout__title").inner_text().strip()
-        if scraper_utilities.is_title_blacklisted(title):
-            with conn:
-                database.write_job_to_discarded(
-                    conn, source, job_id, url, "Match in blacklisted_terms", title
-                )
-                database.delete_from_ingest(conn, row_id)
-            sleep(page_delay)
-            continue
-
         company = posting.locator(".topcard__org-name-link").inner_text().strip()
-        if scraper_utilities.is_company_blacklisted(company):
-            with conn:
-                database.write_job_to_discarded(
-                    conn,
-                    source,
-                    job_id,
-                    url,
-                    "Match in blacklisted_companies",
-                    title,
-                    company,
-                )
-                database.delete_from_ingest(conn, row_id)
-            sleep(page_delay)
-            continue
-
         location = (
             posting.locator(".topcard__flavor-row")
             .locator(".topcard__flavor--bullet")
@@ -143,7 +115,23 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:sc
             posting.locator(".show-more-less-html__markup").inner_text().strip()
         )
 
-        job_obj = StagingJobListing(
+        if filters.is_title_blacklisted(title):
+            with conn:
+                database.write_job_to_discarded(
+                    conn, source, job_id, url, "Match in blacklisted_terms", title)
+                database.delete_from_ingest(conn, row_id)
+            sleep(page_delay)
+            continue
+
+        if filters.is_company_blacklisted(company):
+            with conn:
+                database.write_job_to_discarded(
+                    conn, source, job_id, url, "Match in blacklisted_companies", title, company)
+                database.delete_from_ingest(conn, row_id)
+            sleep(page_delay)
+            continue
+        
+        job_obj = scraper_utilities.StagingJobListing(
             title=title,
             company=company,
             location=location,
