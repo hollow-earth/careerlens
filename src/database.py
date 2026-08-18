@@ -1,8 +1,8 @@
-from posix import stat
 import sqlite3
-from turtle import update
-from joblisting import StagingJobListing
 from datetime import datetime
+
+from joblisting import StagingJobListing
+
 
 def connect() -> sqlite3.Connection:
     return sqlite3.connect("./data/data.db")
@@ -13,7 +13,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
     user_version = cursor.fetchone()[0]
     
     if  user_version == 0:
-        cursor.execute("""
+        _ = cursor.execute("""
             CREATE TABLE IF NOT EXISTS jobs (
                 id INTEGER PRIMARY KEY,
 
@@ -42,7 +42,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
             """)
         conn.commit()
 
-        cursor.execute("""
+        _ = cursor.execute("""
             CREATE TABLE IF NOT EXISTS staging (
                 id INTEGER PRIMARY KEY,
 
@@ -64,7 +64,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
             """)
         conn.commit()
 
-        cursor.execute("""
+        _ = cursor.execute("""
             CREATE TABLE IF NOT EXISTS ingest (
                 id INTEGER PRIMARY KEY,
                 
@@ -80,7 +80,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
             """)
         conn.commit()
 
-        cursor.execute("""
+        _ = cursor.execute("""
             CREATE TABLE IF NOT EXISTS discarded (
                 id INTEGER PRIMARY KEY,
 
@@ -116,7 +116,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
 
 def write_job_to_staging(conn: sqlite3.Connection, job: StagingJobListing) -> None:
     cursor = conn.cursor()
-    cursor.execute("""
+    _ = cursor.execute("""
             INSERT OR IGNORE INTO staging 
             (title, company, location, description, source, job_id, url, status, scraped_at, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -137,7 +137,7 @@ def write_job_to_staging(conn: sqlite3.Connection, job: StagingJobListing) -> No
 
 def write_job_to_ingest(conn: sqlite3.Connection, source: str, job_id: str, url: str) -> None:
     cursor = conn.cursor()
-    cursor.execute("""
+    _ = cursor.execute("""
             INSERT OR IGNORE INTO ingest 
             (source, job_id, url, scraped_at) 
             VALUES (?, ?, ?, ?)

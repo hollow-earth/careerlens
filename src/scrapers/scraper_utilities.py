@@ -1,7 +1,8 @@
+import re
+import unicodedata
+
 from tomllib import load
 from typing_extensions import Any
-import unicodedata
-import re
 
 with open("config.toml", "rb") as f:
     toml_config = load(f)
