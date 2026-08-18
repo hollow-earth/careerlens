@@ -19,8 +19,8 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser) -> None:
     # TODO: put that in scraper_utilities
     keywords = " OR ".join(f'"{item}"' for item in config["search"]["keywords"])
     location = config["search"]["location"]
-    time_filter = str(config["linkedin"]["time_filter"])
-    distance = str(config["linkedin"]["distance"])
+    time_filter = config["linkedin"]["time_filter"]
+    distance = config["linkedin"]["distance"]
 
     # TODO: maybe rewrite this with urllib instead
     search_url = "https://www.linkedin.com/jobs/search?"
