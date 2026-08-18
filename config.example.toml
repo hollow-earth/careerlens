@@ -5,7 +5,11 @@ keywords = [
     "SRE",
     "Software Developer"
 ]
-companies_to_skip = [
+blacklisted_terms = [
+    "Senior",
+    "Lead",
+]
+blacklisted_companies = [
     "Google",
     "Meta"
 ]
