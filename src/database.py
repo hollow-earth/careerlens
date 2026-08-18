@@ -5,7 +5,9 @@ from joblisting import StagingJobListing
 
 
 def connect() -> sqlite3.Connection:
-    return sqlite3.connect("./data/data.db")
+    conn = sqlite3.connect("./data/data.db")
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def init_tables(conn: sqlite3.Connection) -> None:
     cursor = conn.cursor()
