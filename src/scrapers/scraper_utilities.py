@@ -1,6 +1,7 @@
 import re
 import unicodedata
 from dataclasses import dataclass
+from enum import Enum
 
 from typing_extensions import Any
 
@@ -24,8 +25,16 @@ class JobFilters:
     def is_company_blacklisted(self, company: str) -> bool:
         return company.lower() in self.company_blacklist
 
+class JobStatus(Enum):
+    PENDING = "pending"                             # Staging: after scraping filled in the info
+    DUPLICATE_REVIEW = "duplicate_review"           # Staging: candidate for deduplication
+    READY = "ready"                                 # Staging: ready for LLM consumption
+    PENDING_MANUAL_REVIEW = "pending_manual_review" # Jobs: ready for manual review (apply or discard)
+    APPLIED = "applied"                             # Jobs: self-explanatory
+    DISCARDED = "discarded"                         # Discarded: self-explanatory
+
 @dataclass
-class StagingJobListing:
+class JobData:
     title: str
     company: str
     location: str
@@ -33,15 +42,10 @@ class StagingJobListing:
     source: str
     job_id: str
     url: str
-
-    status: str # pending, duplicate_review, ready
-    scraped_at: str
+    status: JobStatus
 
 @dataclass
-class JobListing(StagingJobListing):
-    created_at: str
-    updated_at: str | None
-    applied_at: str | None
+class JobListing(JobData):
     resume_used: str | None
     score: int
     short_score: str

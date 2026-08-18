@@ -8,7 +8,7 @@ from typing_extensions import Any
 
 import database
 from scrapers import scraper_utilities
-
+from datetime import datetime
 
 def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, Any]) -> None:
     page_delay = uniform(1.0, 3.0)
@@ -96,7 +96,6 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:sc
         source = row["source"]
         job_id = row["job_id"]
         url = row["url"]
-        scraped_at = row["scraped_at"]
 
         _ = page.goto(url)
         dismiss_button = page.get_by_role("button", name="Dismiss")
@@ -115,36 +114,35 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:sc
             posting.locator(".show-more-less-html__markup").inner_text().strip()
         )
 
-        if filters.is_title_blacklisted(title):
-            with conn:
-                database.write_job_to_discarded(
-                    conn, source, job_id, url, "Match in blacklisted_terms", title)
-                database.delete_from_ingest(conn, row_id)
-            sleep(page_delay)
-            continue
+        job = scraper_utilities.JobData(
+            title = title,
+            company = company,
+            location = location,
+            description = description,
+            source = source,
+            job_id = job_id,
+            url = url,
+            status = scraper_utilities.JobStatus.PENDING,
+        )
 
         if filters.is_company_blacklisted(company):
+            discard_reason = "Match in blacklisted_companies"
+        elif filters.is_title_blacklisted(title):
+            discard_reason = "Match in blacklisted_terms"
+        else:
+            discard_reason = None
+
+        if discard_reason:
             with conn:
-                database.write_job_to_discarded(
-                    conn, source, job_id, url, "Match in blacklisted_companies", title, company)
+                database.write_job_to_discarded(conn, job, discard_reason,
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
                 database.delete_from_ingest(conn, row_id)
             sleep(page_delay)
             continue
         
-        job_obj = scraper_utilities.StagingJobListing(
-            title=title,
-            company=company,
-            location=location,
-            description=description,
-            source=source,
-            job_id=job_id,
-            url=url,
-            status="pending",
-            scraped_at=scraped_at,
-        )
         try:
             with conn:
-                database.write_job_to_staging(conn=conn, job=job_obj)
+                database.write_job_to_staging(conn=conn, job=job)
                 database.delete_from_ingest(conn=conn, ingest_id=row_id)
         except:
             raise Exception("Couldn't move row from ingest to staging!")
