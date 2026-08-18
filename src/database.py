@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 
-from joblisting import StagingJobListing
+from joblisting import StagingJobListing, JobListing
 
 
 def connect() -> sqlite3.Connection:
@@ -230,6 +230,51 @@ def job_exists_in_pipeline(conn: sqlite3.Connection, source: str, job_id: str, u
         source, job_id, url)
     )
     return cursor.fetchone() is not None
+
+def get_next_staging(conn: sqlite3.Connection) -> sqlite3.Row | None:
+    return conn.execute("""
+        SELECT * FROM staging
+        WHERE status = ready
+        ORDER BY id
+        LIMIT 1
+        """
+    ).fetchone()
+
+def delete_from_staging(conn: sqlite3.Connection, staging_id: str) -> None:
+    conn.execute("""
+        DELETE FROM staging 
+        WHERE id = ?
+        """,
+        (staging_id,)
+    )
+
+def write_job_to_jobs(conn: sqlite3.Connection, job: JobListing) -> None:
+    cursor = conn.cursor()
+    _ = cursor.execute("""
+            INSERT OR IGNORE INTO jobs 
+            (title, company, location, description, source, job_id, url, status, scraped_at, created_at,
+            updated_at, applied_at, resume_used, score, short_score, reasoning)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            job.title,
+            job.company,
+            job.location,
+            job.description,
+            job.source,
+            job.job_id,
+            job.url,
+            job.status,
+            job.scraped_at,
+            job.created_at,
+            datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
+            job.applied_at,
+            job.resume_used,
+            job.score,
+            job.short_score,
+            job.reasoning
+        )
+    )
 
 def close(conn: sqlite3.Connection) -> None:
     conn.close()
