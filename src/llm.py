@@ -168,6 +168,10 @@ def use_llm(config: dict[str, Any], job: JobData) -> JobListing:
     
     Missing a technology that is central to the role should matter
     substantially more.
+
+    Preferred technologies are positive signals, not requirements. 
+    Do not significantly penalize a job for using different technologies 
+    if the underlying work aligns with the candidate's goals.
     
     4. CAREER ALIGNMENT
     
