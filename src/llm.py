@@ -204,13 +204,13 @@ def use_llm(config: dict[str, Any], job: JobData) -> JobListing:
     
     Use the recommendation as follows:
     🟢 Apply immediately:
-    The job is a strong overall match and should be prioritized.
+    The job is a strong opportunity and should be prioritized. Numerical scores from 75–100.
     🟡 Apply (good stretch):
-    The job is attractive but contains meaningful gaps or stretch requirements. The candidate should still consider applying.
+    The job is attractive but contains meaningful gaps or stretch requirements. The candidate should still consider applying. Numerical scores from 60-74.
     🟠 Only apply if you have time (bad stretch):
-    The job has substantial weaknesses or mismatches. Applying is reasonable only if the candidate has sufficient time and application capacity.
-    🔴 Do not apply
-    The job is a poor overall match, conflicts with an important preference or dealbreaker, or has sufficiently significant qualification gaps that applying is unlikely to be worthwhile.
+    The job has substantial weaknesses or mismatches. Applying is reasonable only if the candidate has sufficient time and application capacity. Numerical scores from 50-59.
+    🔴 Do not apply:
+    The job is a poor overall match, conflicts with an important preference or dealbreaker, or has sufficiently significant qualification gaps that applying is unlikely to be worthwhile. Numerical score below 50.
     
     The short score must be consistent with the overall score and reasoning.
     
@@ -249,12 +249,10 @@ def use_llm(config: dict[str, Any], job: JobData) -> JobListing:
     Do not include explanations or any text outside the JSON object.
     """
 
-    print(prompt)
     MAX_RETRIES = 3
     for attempt in range(MAX_RETRIES):
         try:
             response_candidate = generate_response(config, prompt)
-            print(response_candidate)
             valid_response = parse_llm_response(config, response_candidate)
             break
         except:
