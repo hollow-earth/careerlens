@@ -8,6 +8,7 @@ import llm
 from scrapers.linkedin import linkedin_scraper
 from scrapers.scraper_utilities import JobFilters
 
+import time
 # TODO: replace scraper_utilities at some point, move config somewhere more natural
 
 def main():
@@ -21,22 +22,27 @@ def main():
         return
     
     database.init_tables(conn)
-    with sync_playwright() as p:
-        browser = p.firefox.launch(headless=False) # TODO: switch to True when tests are over
-        linkedin_scraper(conn, browser, config, filters)
-        browser.close()
+    #with sync_playwright() as p:
+    #    browser = p.firefox.launch(headless=False) # TODO: switch to True when tests are over
+    #    linkedin_scraper(conn, browser, config, filters)
+    #    browser.close()
     # TODO: dedup time
     
     while True:
+        start_time = time.perf_counter()
         row = database.get_next_staging(conn)
         if row is None:
             break
         
         id, job, created_at = row
+        print(f"Processing job: {job.title}, at {job.company}")
         job_to_write = llm.use_llm(config, job)
         with conn:
             database.write_job_to_jobs(conn, job_to_write, created_at)
             database.delete_from_staging(conn, id)
+        end_time = time.perf_counter()
+        execution_time = end_time - start_time
+        print(f"Processing took {execution_time:.6f}s.\n")
 
     try:
         database.close(conn)
