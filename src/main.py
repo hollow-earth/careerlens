@@ -38,7 +38,16 @@ def main():
         print(f"Processing job: {job.title}, at {job.company}")
         job_to_write = llm.use_llm(config, job)
         with conn:
-            database.write_job_to_jobs(conn, job_to_write, created_at)
+            if job_to_write.score >= config["llm"]["minimum_score"]:
+                database.write_job_to_jobs(conn, job_to_write, created_at)
+            else:
+                database.write_job_to_discarded(
+                    conn, 
+                    job_to_write, 
+                    f"Score {job_to_write.score} below the minimum threshold of {config["llm"]["minimum_score"]}", 
+                    created_at,
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                )
             database.delete_from_staging(conn, id)
         end_time = time.perf_counter()
         execution_time = end_time - start_time
