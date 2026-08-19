@@ -27,7 +27,7 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
         search_url += f"location={location}&"
     if time_filter:
         search_url += f"f_TPR=r{time_filter}&"
-    if distance:
+    if distance or distance == 0:
         search_url += f"distance={distance}&"
     if search_url == "https://www.linkedin.com/jobs/search?":
         raise Exception("You need at least one search term for LinkedIn!")
