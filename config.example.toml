@@ -21,6 +21,9 @@ distance = 0
 [llm]
 model = "gemma4"
 minimum_score = 75
+apply_immediately_threshold = 75
+good_stretch_threshold = 60
+bad_stretch_threshold = 50
 
 career_goals = "Become the best programmer ever, maximize income, etc."
 preferred_roles = [
