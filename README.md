@@ -25,6 +25,9 @@ Each job receives a numerical score based on its overall fit with the candidate.
 |  **50–59** | 🟠 Only apply if you have time | Significant weaknesses or mismatches; lower priority                    |
 |   **0–49** | 🔴 Do not apply                | Poor overall fit, major qualification gaps, or an important dealbreaker |
 
+## Available Scrapers
+- LinkedIn (guest website)
+
 ## Motivation
 Searching for a first job in tech can mean spending hours every day reading essentially the same job postings, figuring out whether you're qualified, and deciding whether each application is worth the effort.
 
