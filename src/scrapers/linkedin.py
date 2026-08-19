@@ -11,7 +11,7 @@ from scrapers.scraper_utilities import JobStatus, JobData, JobFilters
 from datetime import datetime
 
 def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, Any]) -> None:
-    page_delay = uniform(1.0, 3.0)
+    page_delay = uniform(2.0, 4.0)
 
     # TODO: put that in scraper_utilities
     keywords = " OR ".join(f'"{item}"' for item in config["search"]["keywords"])
@@ -73,9 +73,10 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
 
         # Load more jobs if needed, then update the current list of jobs, then grab the next
         show_more_jobs_button = page.locator(".infinite-scroller__show-more-button")
-        if show_more_jobs_button.count() and show_more_jobs_button.is_visible():
-            if dismiss_button.count() and dismiss_button.is_visible():
+        if show_more_jobs_button.count() and show_more_jobs_button.is_visible() and count - i <= 5:
+            if dismiss_button.count() and dismiss_button.is_visible() and count - i <= 5:
                 dismiss_button.click()
+                sleep(page_delay)
             show_more_jobs_button.click()
             sleep(page_delay)
         job_cards = page.locator("ul.jobs-search__results-list > li")
