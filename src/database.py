@@ -186,6 +186,7 @@ def write_job_to_discarded(conn: sqlite3.Connection, job: JobData, discard_reaso
         )
     )
 
+# TODO: change this to return a tuple instead of a sqlite3.Row
 def get_next_ingest(conn: sqlite3.Connection, source: str) -> sqlite3.Row | None:
     return conn.execute("""
         SELECT * FROM ingest
@@ -196,7 +197,7 @@ def get_next_ingest(conn: sqlite3.Connection, source: str) -> sqlite3.Row | None
         (source,)
     ).fetchone()
 
-def delete_from_ingest(conn: sqlite3.Connection, ingest_id: str) -> None:
+def delete_from_ingest(conn: sqlite3.Connection, ingest_id: int) -> None:
     conn.execute("""
         DELETE FROM ingest 
         WHERE id = ?
@@ -226,16 +227,32 @@ def job_exists_in_pipeline(conn: sqlite3.Connection, source: str, job_id: str, u
     )
     return cursor.fetchone() is not None
 
-def get_next_staging(conn: sqlite3.Connection) -> sqlite3.Row | None:
-    return conn.execute("""
+def get_next_staging(conn: sqlite3.Connection) -> tuple[int, JobData, str] | None:
+    row =  conn.execute("""
         SELECT * FROM staging
-        WHERE status = ready
+        WHERE status = ?
         ORDER BY id
         LIMIT 1
-        """
+        """,
+        (JobStatus.READY.value, )
     ).fetchone()
 
-def delete_from_staging(conn: sqlite3.Connection, staging_id: str) -> None:
+    if row is None:
+        return None
+
+    job = JobData(
+        title = row["title"],
+        company = row["company"],
+        location = row["location"],
+        description = row["description"],
+        source = row["source"],
+        job_id = row["job_id"],
+        url = row["url"],
+        status = JobStatus(row["status"])
+    )
+    return (row["id"], job, row["created_at"])
+
+def delete_from_staging(conn: sqlite3.Connection, staging_id: int) -> None:
     conn.execute("""
         DELETE FROM staging 
         WHERE id = ?

@@ -27,11 +27,16 @@ def main():
         browser.close()
     # TODO: dedup time
     
-    """while True:
+    while True:
         row = database.get_next_staging(conn)
         if row is None:
-            break"""
-    # run_llm(get_prompt(prompt))
+            break
+        
+        id, job, created_at = row
+        job_to_write = llm.use_llm(config, job)
+        with conn:
+            database.write_job_to_jobs(conn, job_to_write, created_at)
+            database.delete_from_staging(conn, id)
 
     try:
         database.close(conn)

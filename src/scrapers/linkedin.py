@@ -7,7 +7,7 @@ from playwright.sync_api import Browser
 from typing_extensions import Any
 
 import database
-from scrapers import scraper_utilities
+from scrapers.scraper_utilities import JobStatus, JobData, JobFilters
 from datetime import datetime
 
 def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, Any]) -> None:
@@ -85,7 +85,7 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
     page.close()
 
 
-def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:scraper_utilities.JobFilters) -> None:
+def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:JobFilters) -> None:
     page_delay = uniform(3.0, 5.0)
     page = browser.new_page()
     while True:
@@ -114,7 +114,7 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:sc
             posting.locator(".show-more-less-html__markup").inner_text().strip()
         )
 
-        job = scraper_utilities.JobData(
+        job = JobData(
             title = title,
             company = company,
             location = location,
@@ -122,7 +122,7 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:sc
             source = source,
             job_id = job_id,
             url = url,
-            status = scraper_utilities.JobStatus.PENDING,
+            status = JobStatus.PENDING,
         )
 
         if filters.is_company_blacklisted(company):
@@ -151,6 +151,6 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:sc
     page.close()
 
 
-def linkedin_scraper(conn: Connection, browser: Browser, config: dict[str, Any], filters: scraper_utilities.JobFilters) -> None:
+def linkedin_scraper(conn: Connection, browser: Browser, config: dict[str, Any], filters: JobFilters) -> None:
     linkedin_scrape_urls(conn, browser, config)
     linkedin_extract_url_contents(conn, browser, filters)
