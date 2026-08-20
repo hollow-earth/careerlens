@@ -255,6 +255,8 @@ def use_llm(config: dict[str, Any], job: JobData) -> JobListing:
     
     Do not speculate about applicant counts, interview probability,
     or hiring probability.
+
+    If the candidate provided multiple resumes, suggest which one they should use to apply.
     
     </REASONING>
     

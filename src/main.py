@@ -1,4 +1,6 @@
 import sqlite3
+import time
+from datetime import datetime
 
 from playwright.sync_api import sync_playwright
 from tomllib import load
@@ -8,7 +10,6 @@ import llm
 from scrapers.linkedin import linkedin_scraper
 from scrapers.scraper_utilities import JobFilters
 
-import time
 # TODO: replace scraper_utilities at some point, move config somewhere more natural
 
 def main():
@@ -22,10 +23,10 @@ def main():
         return
     
     database.init_tables(conn)
-    #with sync_playwright() as p:
-    #    browser = p.firefox.launch(headless=False) # TODO: switch to True when tests are over
-    #    linkedin_scraper(conn, browser, config, filters)
-    #    browser.close()
+    with sync_playwright() as p:
+        browser = p.firefox.launch(headless=False) # TODO: switch to True when tests are over
+        linkedin_scraper(conn, browser, config, filters)
+        browser.close()
     # TODO: dedup time
     
     while True:

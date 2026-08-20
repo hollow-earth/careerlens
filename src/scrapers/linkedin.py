@@ -10,9 +10,10 @@ import database
 from scrapers.scraper_utilities import JobStatus, JobData, JobFilters
 from datetime import datetime
 
-def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, Any]) -> None:
-    page_delay = uniform(2.0, 4.0)
+PAGE_DELAY = uniform(3.0, 5.0)
+MAX_RETRIES = 3
 
+def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, Any]) -> None:
     # TODO: put that in scraper_utilities
     keywords = " OR ".join(f'"{item}"' for item in config["search"]["keywords"])
     location = config["search"]["location"]
@@ -47,15 +48,21 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
     job_cards = page.locator("ul.jobs-search__results-list > li")
     count = job_cards.count()
     i = 0
-
     while i < count:
+        scraped_url = ""
         if dismiss_button.count() and dismiss_button.is_visible():
             dismiss_button.click()
         current_job = job_cards.nth(i)
         current_job.click()
 
         # Scrape URL first, remove the subdomain and text after jobs/view/{numerical_id}
-        scraped_url = current_job.locator(".base-card__full-link").get_attribute("href")
+
+        try:
+            scraped_url = current_job.locator(".base-card__full-link").get_attribute("href")
+        except:
+            print(f"Scraping attempt failed")
+            continue
+        
         assert scraped_url is not None, (
             "Expected href attribute to be a string, but got None"
         )
@@ -70,24 +77,24 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
         if not database.job_exists_in_pipeline(conn, "linkedin", job_id, scraped_url):
             with conn:
                 database.write_job_to_ingest(conn, "linkedin", job_id, scraped_url)
+            print("Scraped job:", job_id, " ", scraped_url)
 
         # Load more jobs if needed, then update the current list of jobs, then grab the next
         show_more_jobs_button = page.locator(".infinite-scroller__show-more-button")
         if show_more_jobs_button.count() and show_more_jobs_button.is_visible() and count - i <= 5:
             if dismiss_button.count() and dismiss_button.is_visible() and count - i <= 5:
                 dismiss_button.click()
-                sleep(page_delay)
+                sleep(PAGE_DELAY)
             show_more_jobs_button.click()
-            sleep(page_delay)
+            sleep(PAGE_DELAY)
         job_cards = page.locator("ul.jobs-search__results-list > li")
         count = job_cards.count()
         i += 1
-        sleep(page_delay)
+        sleep(PAGE_DELAY)
     page.close()
 
 
 def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:JobFilters) -> None:
-    page_delay = uniform(3.0, 5.0)
     page = browser.new_page()
     while True:
         row = database.get_next_ingest(conn, "linkedin")
@@ -138,7 +145,7 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:Jo
                 database.write_job_to_discarded(conn, job, discard_reason,
                     datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
                 database.delete_from_ingest(conn, row_id)
-            sleep(page_delay)
+            sleep(PAGE_DELAY)
             continue
         
         try:
@@ -147,7 +154,7 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:Jo
                 database.delete_from_ingest(conn=conn, ingest_id=row_id)
         except:
             raise Exception("Couldn't move row from ingest to staging!")
-        sleep(page_delay)
+        sleep(PAGE_DELAY)
 
     page.close()
 

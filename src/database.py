@@ -104,6 +104,14 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 UNIQUE(url)
             )
             """)
+
+        _ = cursor.execute("""
+            CREATE TABLE IF NOT EXISTS companies (
+                id INTEGER PRIMARY KEY,
+                normalized_name TEXT NOT NULL UNIQUE,
+                status TEXT NOT NULL DEFAULT 'unknown'
+            )
+            """)
         conn.commit()
     else:
         raise Exception("Version not found")
