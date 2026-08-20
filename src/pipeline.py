@@ -1,6 +1,7 @@
 import sqlite3
 import time
 from datetime import datetime
+from typing import Any
 
 from playwright.sync_api import sync_playwright
 from tomllib import load
@@ -10,17 +11,19 @@ import llm
 from scrapers.linkedin import linkedin_scraper
 from scrapers.scraper_utilities import JobFilters
 
-def pipeline():
+
+def load_config() -> tuple[dict[str, Any], JobFilters]:
     with open("config.toml", "rb") as f:
         config = load(f)
-    filters = JobFilters(config)
-    try:
-        conn = database.connect()
-    except sqlite3.Error as error:
-        print(f"Error: {error}")
-        return
-    
+    return config, JobFilters(config)
+
+
+def pipeline():
+    config, filters = load_config()
+    conn = database.connect()
     database.init_tables(conn)
+
+    
     with sync_playwright() as p:
         browser = p.firefox.launch(headless=False) # TODO: switch to True when tests are over
         linkedin_scraper(conn, browser, config, filters)
