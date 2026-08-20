@@ -281,18 +281,18 @@ def use_llm(config: dict[str, Any], job: JobData) -> JobListing:
     for attempt in range(MAX_RETRIES):
         try:
             response_candidate = generate_response(config, prompt)
-            valid_response = parse_llm_response(config, response_candidate)
+            score, reasoning = parse_llm_response(config, response_candidate)
             break
         except:
             print(f"LLM attempt {attempt + 1}/{MAX_RETRIES} failed")
     else:
         raise Exception("LLM failed after 3 attempts")
 
-    if valid_response[0] >= config["llm"]["apply_immediately_threshold"]:
+    if score >= config["llm"]["apply_immediately_threshold"]:
         short_score =  "🟢 Apply immediately"
-    elif valid_response[0] >= config["llm"]["good_stretch_threshold"]:
+    elif score >= config["llm"]["good_stretch_threshold"]:
         short_score =  "🟡 Apply (good stretch)"
-    elif valid_response[0] >= config["llm"]["bad_stretch_threshold"]:
+    elif score >= config["llm"]["bad_stretch_threshold"]:
         short_score =  "🟠 Only apply if you have time (bad stretch)"
     else:
         short_score =  "🔴 Do not apply"
@@ -308,7 +308,7 @@ def use_llm(config: dict[str, Any], job: JobData) -> JobListing:
         job.url,
         JobStatus.PENDING_MANUAL_REVIEW,
         None,
-        valid_response[0],
+        score,
         short_score,
-        valid_response[1]
+        reasoning
     )
