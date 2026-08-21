@@ -5,17 +5,34 @@ from typing import Any
 
 from playwright.sync_api import sync_playwright
 from tomllib import load
+from pathlib import Path
 
 import database
 import llm
 from scrapers.linkedin import linkedin_scraper
 from scrapers.scraper_utilities import JobData, JobFilters
 
+def load_config(path: str | Path = "config.toml") -> dict[str, Any]:
+    """
+    Load a TOML config file and return it as a dict.
 
-def load_config() -> tuple[dict[str, Any], JobFilters]:
-    with open("config.toml", "rb") as f:
-        config = load(f)
-    return config, JobFilters(config)
+    Returns:
+    ------
+    dict[str, Any]: the TOML configuration as a dictionary.
+    """
+    with open(path, "rb") as f:
+        return load(f)
+
+def load_filters(config: dict[str, Any]) -> JobFilters:
+    """
+    Create a JobFilters object from the config.
+
+    Returns:
+    ------
+    JobFilters: object containing blacklisted terms for companies.
+    """
+    # TODO: delete this in the future, replace with a table in sqlite
+    return JobFilters(config)
 
 def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], row: tuple[int, JobData, str]) -> None:
     id, job, created_at = row
@@ -35,6 +52,7 @@ def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], row: 
             )
         database.delete_from_staging(conn, id)
 
+
 def drain_staging(conn: sqlite3.Connection, config: dict[str, Any]) -> None:
     while True:
         start_time = time.perf_counter()
@@ -48,8 +66,10 @@ def drain_staging(conn: sqlite3.Connection, config: dict[str, Any]) -> None:
         execution_time = end_time - start_time
         print(f"Processing took {execution_time:.6f}s.\n")
 
+
 def pipeline():
-    config, filters = load_config()
+    config = load_config()
+    filters = load_filters(config)
     conn = database.connect()
     try:
         database.init_tables(conn)
