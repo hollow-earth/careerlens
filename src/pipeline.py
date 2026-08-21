@@ -16,10 +16,15 @@ def load_config(path: str | Path = "config.toml") -> dict[str, Any]:
     """
     Load a TOML config file and return it as a dict.
 
+    Parameters:
+    -----
+    path (optional): path to the config file.
+    
     Returns:
-    ------
+    -----
     dict[str, Any]: the TOML configuration as a dictionary.
     """
+    
     with open(path, "rb") as f:
         return load(f)
 
@@ -27,14 +32,31 @@ def load_filters(config: dict[str, Any]) -> JobFilters:
     """
     Create a JobFilters object from the config.
 
+    
+    Parameters:
+    -----
+    config: reference to a config TOML dict[str, Any].
+    
     Returns:
-    ------
+    -----
     JobFilters: object containing blacklisted terms for companies.
     """
     # TODO: delete this in the future, replace with a table in sqlite
     return JobFilters(config)
 
 def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], row: tuple[int, JobData, str]) -> None:
+    """
+    Process a job with the LLM and write to the database.
+
+    
+    Parameters:
+    -----
+    conn: connection to the SQLite database.
+    config: reference to a config TOML dict[str, Any].
+    row: tuple corresponding to a row from staging.
+    """
+
+    # TODO: maybe this should be split into two functions?
     id, job, created_at = row
     min_score = config["llm"]["minimum_score"]
     print(f"Processing job: {job.title}, at {job.company}")
@@ -54,6 +76,15 @@ def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], row: 
 
 
 def drain_staging(conn: sqlite3.Connection, config: dict[str, Any]) -> None:
+    """
+    Drains jobs from staging and sends them to the LLM.
+
+    
+    Parameters:
+    -----
+    conn: connection to the SQLite database.
+    config: reference to a config TOML dict[str, Any].
+    """
     while True:
         start_time = time.perf_counter()
         
