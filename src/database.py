@@ -5,9 +5,21 @@ from scrapers.scraper_utilities import JobListing, JobData, JobStatus
 
 
 def connect() -> sqlite3.Connection:
-    conn = sqlite3.connect("./data/data.db")
-    conn.row_factory = sqlite3.Row
-    return conn
+    """
+    Connect to the CareerLens SQLite database.
+
+    Returns:
+    ------
+    sqlite3.Connection: An open database connection.
+    """
+    
+    try:
+        conn = sqlite3.connect("./data/data.db")
+    except sqlite3.Error as error:
+        raise Exception(f"Error: {error}")
+    else:
+        conn.row_factory = sqlite3.Row
+        return conn
 
 def init_tables(conn: sqlite3.Connection) -> None:
     cursor = conn.cursor()
