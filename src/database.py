@@ -205,7 +205,7 @@ def get_next_ingest(conn: sqlite3.Connection, source: JobSource) -> JobEntry | N
         ORDER BY id
         LIMIT 1
         """, 
-        (source,)
+        (source.value,)
     ).fetchone()
 
     return None if row is None else JobEntry(
