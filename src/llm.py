@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import ollama
 from typing_extensions import Any
 
-from scrapers.scraper_utilities import JobData, JobListing, JobStatus
+from scrapers.scraper_utilities import JobEntry, JobStatus
 
 
 def generate_response(config: dict[str, Any], prompt: str) -> str:
@@ -61,7 +61,7 @@ def parse_llm_response(config: dict[str, Any], response: str) -> tuple[int, str]
 
     return (score, reasoning)
 
-def use_llm(config: dict[str, Any], job: JobData) -> JobListing:
+def use_llm(config: dict[str, Any], job: JobEntry) -> JobEntry:
     llm_config = config["llm"]
     prompt = """
     <INSTRUCTIONS>
@@ -298,17 +298,16 @@ def use_llm(config: dict[str, Any], job: JobData) -> JobListing:
         short_score =  "🔴 Do not apply"
     
     # If successful: write to db
-    return JobListing(
-        job.title,
-        job.company,
-        job.location,
-        job.description,
-        job.source,
-        job.job_id,
-        job.url,
-        JobStatus.PENDING_MANUAL_REVIEW,
-        None,
-        score,
-        short_score,
-        reasoning
+    return JobEntry(
+        title = job.title,
+        company = job.company,
+        location = job.location,
+        description = job.description,
+        source = job.source,
+        job_id = job.job_id,
+        url = job.url,
+        status = JobStatus.PENDING_MANUAL_REVIEW,
+        score = score,
+        short_score = short_score,
+        reasoning = reasoning
     )

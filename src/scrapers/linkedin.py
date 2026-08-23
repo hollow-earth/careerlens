@@ -7,7 +7,7 @@ from playwright.sync_api import Browser
 from typing_extensions import Any
 
 import database
-from scrapers.scraper_utilities import JobStatus, JobData, JobFilters
+from scrapers.scraper_utilities import JobEntry, JobStatus, JobFilters
 from datetime import datetime, timezone
 
 PAGE_DELAY = uniform(3.0, 5.0)
@@ -122,7 +122,7 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:Jo
             posting.locator(".show-more-less-html__markup").inner_text().strip()
         )
 
-        job = JobData(
+        job = JobEntry(
             title = title,
             company = company,
             location = location,

@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime, timezone
 
-from scrapers.scraper_utilities import JobListing, JobData, JobStatus
+from scrapers.scraper_utilities import JobEntry, JobStatus
 
 
 def connect() -> sqlite3.Connection:
@@ -130,7 +130,8 @@ def init_tables(conn: sqlite3.Connection) -> None:
     else:
         raise Exception("Version not found")
 
-def write_job_to_staging(conn: sqlite3.Connection, job: JobData) -> None:
+
+def write_job_to_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
     cursor = conn.cursor()
     _ = cursor.execute("""
             INSERT OR IGNORE INTO staging 
@@ -150,6 +151,7 @@ def write_job_to_staging(conn: sqlite3.Connection, job: JobData) -> None:
         )
     )
 
+
 def write_job_to_ingest(conn: sqlite3.Connection, source: str, job_id: str, url: str) -> None:
     cursor = conn.cursor()
     _ = cursor.execute("""
@@ -164,18 +166,9 @@ def write_job_to_ingest(conn: sqlite3.Connection, source: str, job_id: str, url:
         )
     )
 
-def write_job_to_discarded(conn: sqlite3.Connection, job: JobData, discard_reason: str, 
+
+def write_job_to_discarded(conn: sqlite3.Connection, job: JobEntry, discard_reason: str, 
     created_at: str, updated_at: str | None = None, applied_at: str | None = None) -> None:
-    if isinstance(job, JobListing):
-        resume_used = job.resume_used
-        score = job.score
-        short_score = job.short_score
-        reasoning = job.reasoning
-    else:
-        resume_used = None
-        score = None
-        short_score = None
-        reasoning = None
 
     cursor = conn.cursor()
     _ = cursor.execute("""
@@ -199,10 +192,10 @@ def write_job_to_discarded(conn: sqlite3.Connection, job: JobData, discard_reaso
             created_at,
             updated_at,
             applied_at,
-            resume_used,
-            score,
-            short_score,
-            reasoning,
+            job.resume_used,
+            job.score,
+            job.short_score,
+            job.reasoning,
             discard_reason,
             datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         )
@@ -219,6 +212,7 @@ def get_next_ingest(conn: sqlite3.Connection, source: str) -> sqlite3.Row | None
         (source,)
     ).fetchone()
 
+
 def delete_from_ingest(conn: sqlite3.Connection, ingest_id: int) -> None:
     conn.execute("""
         DELETE FROM ingest 
@@ -226,6 +220,7 @@ def delete_from_ingest(conn: sqlite3.Connection, ingest_id: int) -> None:
         """,
         (ingest_id,)
     )
+
 
 def job_exists_in_pipeline(conn: sqlite3.Connection, source: str, job_id: str, url: str) -> bool:
     cursor = conn.execute("""
@@ -249,7 +244,8 @@ def job_exists_in_pipeline(conn: sqlite3.Connection, source: str, job_id: str, u
     )
     return cursor.fetchone() is not None
 
-def get_next_staging(conn: sqlite3.Connection) -> tuple[int, JobData, str] | None:
+
+def get_next_staging(conn: sqlite3.Connection) -> tuple[int, JobEntry, str] | None:
     row =  conn.execute("""
         SELECT * FROM staging
         WHERE status = ?
@@ -262,7 +258,7 @@ def get_next_staging(conn: sqlite3.Connection) -> tuple[int, JobData, str] | Non
     if row is None:
         return None
 
-    job = JobData(
+    job = JobEntry(
         title = row["title"],
         company = row["company"],
         location = row["location"],
@@ -274,6 +270,7 @@ def get_next_staging(conn: sqlite3.Connection) -> tuple[int, JobData, str] | Non
     )
     return (row["id"], job, row["created_at"])
 
+
 def delete_from_staging(conn: sqlite3.Connection, staging_id: int) -> None:
     conn.execute("""
         DELETE FROM staging 
@@ -282,7 +279,8 @@ def delete_from_staging(conn: sqlite3.Connection, staging_id: int) -> None:
         (staging_id,)
     )
 
-def write_job_to_jobs(conn: sqlite3.Connection, job: JobListing, created_at: str) -> None:
+
+def write_job_to_jobs(conn: sqlite3.Connection, job: JobEntry, created_at: str) -> None:
     cursor = conn.cursor()
     _ = cursor.execute("""
             INSERT OR IGNORE INTO jobs 
@@ -300,7 +298,7 @@ def write_job_to_jobs(conn: sqlite3.Connection, job: JobListing, created_at: str
             job.url,
             JobStatus.PENDING_MANUAL_REVIEW.value,
             created_at,
-            datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
+            datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             None,
             None,
             job.score,
@@ -308,6 +306,7 @@ def write_job_to_jobs(conn: sqlite3.Connection, job: JobListing, created_at: str
             job.reasoning
         )
     )
+
 
 def close(conn: sqlite3.Connection) -> None:
     conn.close()

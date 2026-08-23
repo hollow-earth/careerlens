@@ -2,7 +2,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from enum import Enum
-
+from datetime import datetime
 from typing_extensions import Any
 
 
@@ -33,20 +33,22 @@ class JobStatus(Enum):
     APPLIED = "applied"                             # Jobs: self-explanatory
     DISCARDED = "discarded"                         # Discarded: self-explanatory
 
-@dataclass
-class JobData:
-    title: str
-    company: str
-    location: str
-    description: str
+@dataclass 
+class JobEntry:
     source: str
     job_id: str
     url: str
-    status: JobStatus
 
-@dataclass
-class JobListing(JobData):
-    resume_used: str | None
-    score: int
-    short_score: str
-    reasoning: str
+    title: str | None = None
+    company: str | None = None
+    location: str | None = None
+    description: str | None = None
+    status: JobStatus = JobStatus.PENDING
+    resume_used: str | None = None
+    score: int | None = None
+    short_score: str | None = None
+    reasoning: str | None = None
+    created_at: str | datetime | None = None
+    updated_at: str | datetime | None = None
+    applied_at: str | datetime | None = None
+    discarded_at: str | datetime | None = None

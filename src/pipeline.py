@@ -10,7 +10,7 @@ from pathlib import Path
 import database
 import llm
 from scrapers.linkedin import linkedin_scraper
-from scrapers.scraper_utilities import JobData, JobFilters
+from scrapers.scraper_utilities import JobEntry, JobFilters
 
 def load_config(path: str | Path = "config.toml") -> dict[str, Any]:
     """
@@ -44,7 +44,7 @@ def load_filters(config: dict[str, Any]) -> JobFilters:
     # TODO: delete this in the future, replace with a table in sqlite
     return JobFilters(config)
 
-def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], row: tuple[int, JobData, str]) -> None:
+def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], row: tuple[int, JobEntry, str]) -> None:
     """
     Process a job with the LLM and write to the database.
 
