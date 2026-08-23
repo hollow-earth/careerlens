@@ -28,7 +28,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
     user_version = cursor.fetchone()[0]
     
     if  user_version == 0:
-        _ = cursor.execute("""
+        _ = cursor.executescript("""
             CREATE TABLE IF NOT EXISTS jobs (
                 id INTEGER PRIMARY KEY,
 
@@ -48,14 +48,14 @@ def init_tables(conn: sqlite3.Connection) -> None:
     
                 score INTEGER,
                 short_score TEXT,
-                reasoning TEXT,
+                reasoning TEXT
+            );
 
-                UNIQUE(source, job_id)
-                UNIQUE(url)
-            )
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_source_jobid ON jobs(source, job_id);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_url ON jobs(url);
             """)
 
-        _ = cursor.execute("""
+        _ = cursor.executescript("""
             CREATE TABLE IF NOT EXISTS staging (
                 id INTEGER PRIMARY KEY,
 
@@ -68,27 +68,27 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 url TEXT NOT NULL,
 
                 status TEXT NOT NULL DEFAULT 'pending',
-                created_at TEXT NOT NULL,
-
-                UNIQUE(source, job_id)
-                UNIQUE(url)
-            )
+                created_at TEXT NOT NULL
+            );
+            
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_staging_source_jobid ON staging(source, job_id);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_staging_url ON staging(url);
             """)
 
-        _ = cursor.execute("""
+        _ = cursor.executescript("""
             CREATE TABLE IF NOT EXISTS ingest (
                 id INTEGER PRIMARY KEY,
                 
                 source TEXT NOT NULL,
                 job_id TEXT NOT NULL,
-                url TEXT NOT NULL UNIQUE,
+                url TEXT NOT NULL,
+            );
 
-                UNIQUE(source, job_id)
-                UNIQUE(url)
-            )
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_ingest_source_jobid ON ingest(source, job_id);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_ingest_url ON ingest(url);
             """)
 
-        _ = cursor.execute("""
+        _ = cursor.executescript("""
             CREATE TABLE IF NOT EXISTS discarded (
                 id INTEGER PRIMARY KEY,
 
@@ -111,19 +111,20 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 reasoning TEXT,
 
                 discard_reason TEXT NOT NULL,
-                discarded_at TEXT NOT NULL,
-                
-                UNIQUE(source, job_id)
-                UNIQUE(url)
-            )
+                discarded_at TEXT NOT NULL
+            );
+
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_discarded_source_jobid ON discarded(source, job_id);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_discarded_url ON discarded(url);
             """)
 
-        _ = cursor.execute("""
+        _ = cursor.executescript("""
             CREATE TABLE IF NOT EXISTS companies (
                 id INTEGER PRIMARY KEY,
                 normalized_name TEXT NOT NULL UNIQUE,
-                status TEXT NOT NULL DEFAULT 'unknown'
-            )
+                status TEXT NOT NULL DEFAULT 'unknown',
+                requires_cover_letter BOOLEAN
+            );
             """)
         conn.commit()
     else:
