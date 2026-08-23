@@ -222,7 +222,7 @@ def write_job_to_discarded(conn: sqlite3.Connection, job: JobEntry) -> None:
             job.company,
             job.location,
             job.description,
-            job.source,
+            job.source.value,
             job.job_id,
             job.url,
             job.status.value,
@@ -253,7 +253,7 @@ def write_job_to_jobs(conn: sqlite3.Connection, job: JobEntry) -> None:
             job.company,
             job.location,
             job.description,
-            job.source,
+            job.source.value,
             job.job_id,
             job.url,
             JobStatus.PENDING_MANUAL_REVIEW.value,
@@ -324,5 +324,5 @@ def delete_from_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
         DELETE FROM staging 
         WHERE (source = ? AND job_id = ?) OR url = ?
         """,
-        (job.source, job.job_id, job.url,)
+        (job.source.value, job.job_id, job.url,)
     )
