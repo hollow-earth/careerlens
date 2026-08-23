@@ -27,6 +27,15 @@ class JobFilters:
 
 class JobSource(Enum):
     LINKEDIN = "linkedin"
+    INDEED = "indeed"
+    EIGHTFOLD = "eightfold"
+    SMARTRECRUITERS = "smart_recruiters"
+    ASHBY = "ashby"
+    GREENHOUSE = "greenhouse"
+    BAMBOO_HR = "bamboo_hr"
+    ICIMS = "icims"
+    LEVER = "lever"
+    WORKDAY = "workday"
 
 class JobStatus(Enum):
     PENDING = "pending"                             # Staging: after scraping filled in the info
