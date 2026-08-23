@@ -74,11 +74,12 @@ def test_ingest_delete(conn: Connection) -> None:
     assert len(res) == len(s)
 
 
-def test_get_next_ingest(conn: Connection) -> None:
+def test_ingest_get_next(conn: Connection) -> None:
     job1 = JobEntry(JobSource.LINKEDIN, "123456789", "https://linkedin.com/123456789")
     job2 = JobEntry(JobSource.INDEED, "a7a3467cad7fdedb", "https://indeed.com/viewjob?jk=a7a3467cad7fdedb")
-    job3 = JobEntry(JobSource.LINKEDIN, "555555555", "https://linkedin.com/123456789")
+    job3 = JobEntry(JobSource.LINKEDIN, "555555555", "https://linkedin.com/555555555")
     job4 = JobEntry(JobSource.INDEED, "84ea4a111369c8d7", "https://indeed.com/viewjob?jk=84ea4a111369c8d7")
+    job5 = JobEntry(JobSource.LINKEDIN, "555555555", "https://linkedin.com/555555555")
     database.write_job_to_ingest(conn, job1)
     database.write_job_to_ingest(conn, job2)
     database.write_job_to_ingest(conn, job3)
@@ -91,10 +92,28 @@ def test_get_next_ingest(conn: Connection) -> None:
     d = database.get_next_ingest(conn, JobSource.LINKEDIN)
     assert d is not None and d.job_id == job1.job_id
     database.delete_from_ingest(conn, job1)
-    d = database.get_next_ingest(conn, JobSource.LINKEDIN)
-    assert d is not None and d.job_id == job2.job_id
 
-# def get_next_ingest(conn: sqlite3.Connection, source: JobSource) -> JobEntry | None:
+    d = database.get_next_ingest(conn, JobSource.LINKEDIN)
+    assert d is not None and d.job_id == job3.job_id
+    database.delete_from_ingest(conn, job3)
+
+    database.write_job_to_ingest(conn, job5)
+
+    d = database.get_next_ingest(conn, JobSource.INDEED)
+    assert d is not None and d.job_id == job2.job_id
+    database.delete_from_ingest(conn, job2)
+    
+    d = database.get_next_ingest(conn, JobSource.INDEED)
+    assert d is not None and d.job_id == job4.job_id
+    database.delete_from_ingest(conn, job4)
+
+    d = database.get_next_ingest(conn, JobSource.LINKEDIN)
+    assert d is not None and d.job_id == job5.job_id
+    database.delete_from_ingest(conn, job5)
+
+    assert database.get_next_ingest(conn, JobSource.LINKEDIN) is None
+    assert database.get_next_ingest(conn, JobSource.INDEED) is None
+
 
 """
 # ========================================= #
@@ -104,7 +123,37 @@ def test_get_next_ingest(conn: Connection) -> None:
 # ========================================= #
 """
 
+def helper_populate_staging_entries(conn: Connection, source: JobSource, number: int) -> set[int]:
+    ...
 
+
+def test_staging_insert(conn: Connection) -> None:
+    ...
+
+
+def test_staging_dedups_on_url(conn: Connection) -> None:
+    job1 = JobEntry(JobSource.LINKEDIN, "123456789", "https://linkedin.com/123456789")
+    job2 = JobEntry(JobSource.LINKEDIN, "555555555", "https://linkedin.com/123456789")
+    database.write_job_to_staging(conn, job1)
+    database.write_job_to_staging(conn, job2)
+    res = conn.execute("SELECT * FROM staging").fetchall()
+    assert len(res) == 1
+
+
+def test_staging_dedups_on_job_id(conn: Connection) -> None:
+    ...
+
+
+def test_staging_dedups_on_rescrape(conn: Connection) -> None:
+    ...
+
+
+def test_staging_delete(conn: Connection) -> None:
+    ...
+
+
+def test_staging_get_next(conn: Connection) -> None:
+    ...
 
 
 
