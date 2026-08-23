@@ -44,7 +44,7 @@ def load_filters(config: dict[str, Any]) -> JobFilters:
     # TODO: delete this in the future, replace with a table in sqlite
     return JobFilters(config)
 
-def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], row: tuple[int, JobEntry, str]) -> None:
+def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], job: JobEntry) -> None:
     """
     Process a job with the LLM and write to the database.
 
@@ -57,21 +57,17 @@ def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], row: 
     """
 
     # TODO: maybe this should be split into two functions?
-    id, job, created_at = row
-    min_score = config["llm"]["minimum_score"]
+    min_score = int(config["llm"]["minimum_score"])
     print(f"Processing job: {job.title}, at {job.company}")
     job_to_write = llm.use_llm(config, job)
+    job_to_write.updated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    job_to_write.discard_reason = f"Score {job_to_write.score} below the minimum threshold of {min_score}"
     with conn:
-        if job_to_write.score >=min_score:
-            database.write_job_to_jobs(conn, job_to_write, created_at)
+        if job_to_write.score is not None and job_to_write.score >= min_score:
+            database.write_job_to_jobs(conn, job_to_write)
         else:
-            database.write_job_to_discarded(
-                conn, 
-                job_to_write, 
-                f"Score {job_to_write.score} below the minimum threshold of {min_score}", 
-                created_at,
-                datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
-        database.delete_from_staging(conn, id)
+            database.write_job_to_discarded(conn, job_to_write)
+        database.delete_from_staging(conn, job_to_write)
 
 
 def drain_staging(conn: sqlite3.Connection, config: dict[str, Any]) -> None:
@@ -87,10 +83,10 @@ def drain_staging(conn: sqlite3.Connection, config: dict[str, Any]) -> None:
     while True:
         start_time = time.perf_counter()
         
-        row_data = database.get_next_staging(conn)
-        if row_data is None:
+        job = database.get_next_staging(conn)
+        if job is None:
             break
-        process_job_with_llm(conn, config, row_data)
+        process_job_with_llm(conn, config, job)
         
         end_time = time.perf_counter()
         execution_time = end_time - start_time

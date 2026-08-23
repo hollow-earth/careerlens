@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime, timezone
 
-from scrapers.scraper_utilities import JobEntry, JobStatus
+from scrapers.scraper_utilities import JobEntry, JobSource, JobStatus
 
 
 def connect() -> sqlite3.Connection:
@@ -81,7 +81,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
                 
                 source TEXT NOT NULL,
                 job_id TEXT NOT NULL,
-                url TEXT NOT NULL,
+                url TEXT NOT NULL
             );
 
             CREATE UNIQUE INDEX IF NOT EXISTS idx_ingest_source_jobid ON ingest(source, job_id);
@@ -132,8 +132,7 @@ def init_tables(conn: sqlite3.Connection) -> None:
 
 
 def write_job_to_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
-    cursor = conn.cursor()
-    _ = cursor.execute("""
+    _ = conn.execute("""
             INSERT OR IGNORE INTO staging 
             (title, company, location, description, source, job_id, url, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -143,7 +142,7 @@ def write_job_to_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
             job.company,
             job.location,
             job.description,
-            job.source,
+            job.source.value,
             job.job_id,
             job.url,
             JobStatus.PENDING.value,
@@ -152,7 +151,7 @@ def write_job_to_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
     )
 
 
-def write_job_to_ingest(conn: sqlite3.Connection, source: str, job_id: str, url: str) -> None:
+def write_job_to_ingest(conn: sqlite3.Connection, job: JobEntry) -> None:
     cursor = conn.cursor()
     _ = cursor.execute("""
             INSERT OR IGNORE INTO ingest 
@@ -160,24 +159,21 @@ def write_job_to_ingest(conn: sqlite3.Connection, source: str, job_id: str, url:
             VALUES (?, ?, ?)
         """,
         (
-            source, 
-            job_id, 
-            url
+            job.source.value, 
+            job.job_id, 
+            job.url
         )
     )
 
 
-def write_job_to_discarded(conn: sqlite3.Connection, job: JobEntry, discard_reason: str, 
-    created_at: str, updated_at: str | None = None, applied_at: str | None = None) -> None:
-
+def write_job_to_discarded(conn: sqlite3.Connection, job: JobEntry) -> None:
     cursor = conn.cursor()
     _ = cursor.execute("""
             INSERT OR IGNORE INTO discarded 
             (
             title, company, location, description, source, job_id, url,
             status, created_at, updated_at, applied_at, resume_used, 
-            score, short_score, reasoning,
-            discard_reason, discarded_at)
+            score, short_score, reasoning, discard_reason, discarded_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
@@ -188,22 +184,22 @@ def write_job_to_discarded(conn: sqlite3.Connection, job: JobEntry, discard_reas
             job.source,
             job.job_id,
             job.url,
-            JobStatus.DISCARDED.value,
-            created_at,
-            updated_at,
-            applied_at,
+            job.status.value,
+            job.created_at,
+            job.updated_at,
+            job.applied_at,
             job.resume_used,
             job.score,
             job.short_score,
             job.reasoning,
-            discard_reason,
+            job.discard_reason,
             datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         )
     )
 
-# TODO: change this to return a tuple instead of a sqlite3.Row
-def get_next_ingest(conn: sqlite3.Connection, source: str) -> sqlite3.Row | None:
-    return conn.execute("""
+
+def get_next_ingest(conn: sqlite3.Connection, source: JobSource) -> JobEntry | None:
+    row = conn.execute("""
         SELECT * FROM ingest
         WHERE source = ?
         ORDER BY id
@@ -212,17 +208,23 @@ def get_next_ingest(conn: sqlite3.Connection, source: str) -> sqlite3.Row | None
         (source,)
     ).fetchone()
 
-
-def delete_from_ingest(conn: sqlite3.Connection, ingest_id: int) -> None:
-    conn.execute("""
-        DELETE FROM ingest 
-        WHERE id = ?
-        """,
-        (ingest_id,)
+    return None if row is None else JobEntry(
+        source = JobSource(row["source"]), 
+        job_id = row["job_id"], 
+        url = row["url"]
     )
 
 
-def job_exists_in_pipeline(conn: sqlite3.Connection, source: str, job_id: str, url: str) -> bool:
+def delete_from_ingest(conn: sqlite3.Connection, job: JobEntry) -> None:
+    _ = conn.execute("""
+        DELETE FROM ingest 
+        WHERE (source = ? AND job_id = ?) OR url = ?
+        """,
+        (job.source, job.job_id, job.url,)
+    )
+
+
+def job_exists_in_pipeline(conn: sqlite3.Connection, job: JobEntry) -> bool:
     cursor = conn.execute("""
         SELECT 1 FROM ingest
             WHERE (source = ? AND job_id = ?) OR url = ?
@@ -237,16 +239,16 @@ def job_exists_in_pipeline(conn: sqlite3.Connection, source: str, job_id: str, u
             WHERE (source = ? AND job_id = ?) OR url = ?
         LIMIT 1
         """,
-        (source, job_id, url,
-        source, job_id, url,
-        source, job_id, url,
-        source, job_id, url)
+        (job.source.value, job.job_id, job.url,
+        job.source.value, job.job_id, job.url,
+        job.source.value, job.job_id, job.url,
+        job.source.value, job.job_id, job.url)
     )
     return cursor.fetchone() is not None
 
 
-def get_next_staging(conn: sqlite3.Connection) -> tuple[int, JobEntry, str] | None:
-    row =  conn.execute("""
+def get_next_staging(conn: sqlite3.Connection) -> JobEntry | None:
+    row = conn.execute("""
         SELECT * FROM staging
         WHERE status = ?
         ORDER BY id
@@ -255,10 +257,7 @@ def get_next_staging(conn: sqlite3.Connection) -> tuple[int, JobEntry, str] | No
         (JobStatus.READY.value, )
     ).fetchone()
 
-    if row is None:
-        return None
-
-    job = JobEntry(
+    return None if row is None else JobEntry(
         title = row["title"],
         company = row["company"],
         location = row["location"],
@@ -266,21 +265,21 @@ def get_next_staging(conn: sqlite3.Connection) -> tuple[int, JobEntry, str] | No
         source = row["source"],
         job_id = row["job_id"],
         url = row["url"],
-        status = JobStatus(row["status"])
+        status = JobStatus(row["status"]),
+        created_at = row["created_at"]
     )
-    return (row["id"], job, row["created_at"])
 
 
-def delete_from_staging(conn: sqlite3.Connection, staging_id: int) -> None:
-    conn.execute("""
+def delete_from_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
+    _ = conn.execute("""
         DELETE FROM staging 
-        WHERE id = ?
+        WHERE (source = ? AND job_id = ?) OR url = ?
         """,
-        (staging_id,)
+        (job.source, job.job_id, job.url,)
     )
 
 
-def write_job_to_jobs(conn: sqlite3.Connection, job: JobEntry, created_at: str) -> None:
+def write_job_to_jobs(conn: sqlite3.Connection, job: JobEntry) -> None:
     cursor = conn.cursor()
     _ = cursor.execute("""
             INSERT OR IGNORE INTO jobs 
@@ -297,7 +296,7 @@ def write_job_to_jobs(conn: sqlite3.Connection, job: JobEntry, created_at: str) 
             job.job_id,
             job.url,
             JobStatus.PENDING_MANUAL_REVIEW.value,
-            created_at,
+            job.created_at,
             datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             None,
             None,

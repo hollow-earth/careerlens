@@ -7,7 +7,7 @@ from playwright.sync_api import Browser
 from typing_extensions import Any
 
 import database
-from scrapers.scraper_utilities import JobEntry, JobStatus, JobFilters
+from scrapers.scraper_utilities import JobEntry, JobStatus, JobFilters, JobSource
 from datetime import datetime, timezone
 
 PAGE_DELAY = uniform(3.0, 5.0)
@@ -62,7 +62,7 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
         except:
             print(f"Scraping attempt failed")
             continue
-        
+        # TODO: assert has to be reaplced in the future with proper exceptions
         assert scraped_url is not None, (
             "Expected href attribute to be a string, but got None"
         )
@@ -74,9 +74,10 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
         scraped_url = f"https://www.linkedin.com/jobs/view/{job_id}"
 
         # If it already exists in ingest, staging, or jobs, skip adding to ingest
-        if not database.job_exists_in_pipeline(conn, "linkedin", job_id, scraped_url):
+        job = JobEntry(JobSource.LINKEDIN, job_id, scraped_url)
+        if not database.job_exists_in_pipeline(conn, job):
             with conn:
-                database.write_job_to_ingest(conn, "linkedin", job_id, scraped_url)
+                database.write_job_to_ingest(conn, job)
             print("Scraped job:", job_id, " ", scraped_url)
 
         # Load more jobs if needed, then update the current list of jobs, then grab the next
@@ -97,64 +98,50 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
 def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:JobFilters) -> None:
     page = browser.new_page()
     while True:
-        row = database.get_next_ingest(conn, "linkedin")
-        if row is None:
+        job = database.get_next_ingest(conn, JobSource.LINKEDIN)
+        if job is None:
             break
-        row_id = row["id"]
-        source = row["source"]
-        job_id = row["job_id"]
-        url = row["url"]
 
-        _ = page.goto(url)
+        _ = page.goto(job.url)
         dismiss_button = page.get_by_role("button", name="Dismiss")
         if dismiss_button.count() and dismiss_button.is_visible():
             dismiss_button.click()
         posting = page.locator(".details")
-        title = posting.locator(".top-card-layout__title").inner_text().strip()
-        company = posting.locator(".topcard__org-name-link").inner_text().strip()
-        location = (
+
+        job.title = posting.locator(".top-card-layout__title").inner_text().strip()
+        job.company = posting.locator(".topcard__org-name-link").inner_text().strip()
+        job.location = (
             posting.locator(".topcard__flavor-row")
             .locator(".topcard__flavor--bullet")
             .first.inner_text()
             .strip()
         )
-        description = (
+        job.description = (
             posting.locator(".show-more-less-html__markup").inner_text().strip()
         )
+        job.status = JobStatus.PENDING
 
-        job = JobEntry(
-            title = title,
-            company = company,
-            location = location,
-            description = description,
-            source = source,
-            job_id = job_id,
-            url = url,
-            status = JobStatus.PENDING,
-        )
+        if filters.is_company_blacklisted(job.company):
+            job.discard_reason = "Match in blacklisted_companies"
+        elif filters.is_title_blacklisted(job.title):
+            job.discard_reason = "Match in blacklisted_terms"
 
-        if filters.is_company_blacklisted(company):
-            discard_reason = "Match in blacklisted_companies"
-        elif filters.is_title_blacklisted(title):
-            discard_reason = "Match in blacklisted_terms"
-        else:
-            discard_reason = None
-
-        if discard_reason:
+        if job.discard_reason:
+            job.discarded_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            job.status = JobStatus.DISCARDED
             with conn:
-                database.write_job_to_discarded(conn, job, discard_reason,
-                   datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
-                database.delete_from_ingest(conn, row_id)
+                database.write_job_to_discarded(conn, job)
+                database.delete_from_ingest(conn, job)
             sleep(PAGE_DELAY)
-            continue
-        
-        try:
-            with conn:
-                database.write_job_to_staging(conn=conn, job=job)
-                database.delete_from_ingest(conn=conn, ingest_id=row_id)
-        except:
-            raise Exception("Couldn't move row from ingest to staging!")
-        sleep(PAGE_DELAY)
+
+        else:
+            try:
+                with conn:
+                    database.write_job_to_staging(conn, job)
+                    database.delete_from_ingest(conn, job)
+            except:
+                raise Exception("Couldn't move row from ingest to staging!")
+            sleep(PAGE_DELAY)
 
     page.close()
 

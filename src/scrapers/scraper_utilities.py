@@ -25,6 +25,9 @@ class JobFilters:
     def is_company_blacklisted(self, company: str) -> bool:
         return company.lower() in self.company_blacklist
 
+class JobSource(Enum):
+    LINKEDIN = "linkedin"
+
 class JobStatus(Enum):
     PENDING = "pending"                             # Staging: after scraping filled in the info
     DUPLICATE_REVIEW = "duplicate_review"           # Staging: candidate for deduplication
@@ -35,7 +38,7 @@ class JobStatus(Enum):
 
 @dataclass 
 class JobEntry:
-    source: str
+    source: JobSource
     job_id: str
     url: str
 
@@ -52,3 +55,4 @@ class JobEntry:
     updated_at: str | datetime | None = None
     applied_at: str | datetime | None = None
     discarded_at: str | datetime | None = None
+    discard_reason: str | None = None
