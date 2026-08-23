@@ -7,34 +7,35 @@ from src.scrapers.scraper_utilities import JobEntry, JobSource
 POPULATE_NUMBER_ENTRIES = 25
 
 """
-
-Tests with the ingest table
-
+# ========================================= #
+# 
+#       Tests with the ingest table
+# 
+# ========================================= #
 """
 
-
-def helper_populate_ingest_entries(conn: Connection) -> set[int]:
+def helper_populate_ingest_entries(conn: Connection, source: JobSource, number: int) -> set[int]:
     s: set[int] = set()
     i = 0
-    while i < POPULATE_NUMBER_ENTRIES:
+    while i < number:
         id = randint(1, 999999)
         if id not in s:
             s.add(id)
             i += 1
             database.write_job_to_ingest(
                 conn,
-                JobEntry(JobSource.LINKEDIN, f"{id}", f"https://linkedin.com/{id}"),
+                JobEntry(source, f"{id}", f"https://linkedin.com/{id}"),
             )
     return s
 
 
-def test_ingest_insert(conn: Connection):
-    s = helper_populate_ingest_entries(conn)
+def test_ingest_insert(conn: Connection) -> None:
+    s = helper_populate_ingest_entries(conn, JobSource.LINKEDIN, POPULATE_NUMBER_ENTRIES)
     res = conn.execute("SELECT * FROM ingest").fetchall()
     assert len(res) == len(s)
 
 
-def test_ingest_dedups_on_url(conn: Connection):
+def test_ingest_dedups_on_url(conn: Connection) -> None:
     job1 = JobEntry(JobSource.LINKEDIN, "123456789", "https://linkedin.com/123456789")
     job2 = JobEntry(JobSource.LINKEDIN, "555555555", "https://linkedin.com/123456789")
     database.write_job_to_ingest(conn, job1)
@@ -43,7 +44,7 @@ def test_ingest_dedups_on_url(conn: Connection):
     assert len(res) == 1
 
 
-def test_ingest_dedups_on_job_id(conn: Connection):
+def test_ingest_dedups_on_job_id(conn: Connection) -> None:
     job1 = JobEntry(JobSource.LINKEDIN, "123456789", "https://linkedin.com/123456789")
     job2 = JobEntry(JobSource.LINKEDIN, "555555555", "https://linkedin.com/123456789")
     database.write_job_to_ingest(conn, job1)
@@ -52,7 +53,7 @@ def test_ingest_dedups_on_job_id(conn: Connection):
     assert len(res) == 1
 
 
-def test_ingest_dedups_on_rescrape(conn: Connection):
+def test_ingest_dedups_on_rescrape(conn: Connection) -> None:
     job = JobEntry(JobSource.LINKEDIN, "123456789", "https://linkedin.com/123456789")
     for _ in range(5):
         database.write_job_to_ingest(conn, job)
@@ -60,8 +61,8 @@ def test_ingest_dedups_on_rescrape(conn: Connection):
     assert len(res) == 1
 
 
-def test_ingest_delete(conn: Connection):
-    s = helper_populate_ingest_entries(conn)
+def test_ingest_delete(conn: Connection) -> None:
+    s = helper_populate_ingest_entries(conn, JobSource.LINKEDIN, POPULATE_NUMBER_ENTRIES)
     N = randint(1, POPULATE_NUMBER_ENTRIES - 1)
     for _ in range(N):
         id = s.pop()
@@ -71,3 +72,104 @@ def test_ingest_delete(conn: Connection):
         )
     res = conn.execute("SELECT * FROM ingest").fetchall()
     assert len(res) == len(s)
+
+
+def test_get_next_ingest(conn: Connection) -> None:
+    job1 = JobEntry(JobSource.LINKEDIN, "123456789", "https://linkedin.com/123456789")
+    job2 = JobEntry(JobSource.INDEED, "a7a3467cad7fdedb", "https://indeed.com/viewjob?jk=a7a3467cad7fdedb")
+    job3 = JobEntry(JobSource.LINKEDIN, "555555555", "https://linkedin.com/123456789")
+    job4 = JobEntry(JobSource.INDEED, "84ea4a111369c8d7", "https://indeed.com/viewjob?jk=84ea4a111369c8d7")
+    database.write_job_to_ingest(conn, job1)
+    database.write_job_to_ingest(conn, job2)
+    database.write_job_to_ingest(conn, job3)
+    database.write_job_to_ingest(conn, job4)
+
+    d = database.get_next_ingest(conn, JobSource.LINKEDIN)
+    assert d is not None and d.job_id == job1.job_id
+    d = database.get_next_ingest(conn, JobSource.LINKEDIN)
+    assert d is not None and d.job_id == job1.job_id
+    d = database.get_next_ingest(conn, JobSource.LINKEDIN)
+    assert d is not None and d.job_id == job1.job_id
+    database.delete_from_ingest(conn, job1)
+    d = database.get_next_ingest(conn, JobSource.LINKEDIN)
+    assert d is not None and d.job_id == job2.job_id
+
+# def get_next_ingest(conn: sqlite3.Connection, source: JobSource) -> JobEntry | None:
+
+"""
+# ========================================= #
+# 
+#       Tests with the staging table
+# 
+# ========================================= #
+"""
+
+
+
+
+
+"""
+# ========================================= #
+# 
+#       Tests with the jobs table
+# 
+# ========================================= #
+"""
+
+
+
+
+
+"""
+# ========================================= #
+# 
+#       Tests with the discarded table
+# 
+# ========================================= #
+"""
+
+
+
+
+
+"""
+# ========================================= #
+# 
+#       Tests with the companies table
+# 
+# ========================================= #
+"""
+
+
+
+
+
+"""
+# ========================================= #
+# 
+#       Tests with deduplication
+# 
+# ========================================= #
+"""
+
+# def job_exists_in_pipeline(conn: sqlite3.Connection, job: JobEntry) -> bool:
+
+
+
+
+"""
+def write_job_to_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
+def delete_from_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
+def get_next_staging(conn: sqlite3.Connection) -> JobEntry | None:
+
+def write_job_to_discarded(conn: sqlite3.Connection, job: JobEntry) -> None:
+
+def write_job_to_jobs(conn: sqlite3.Connection, job: JobEntry) -> None:"""
+
+
+
+
+
+
+
+
