@@ -8,7 +8,7 @@ from typing_extensions import Any
 
 import database
 from scrapers.scraper_utilities import JobStatus, JobData, JobFilters
-from datetime import datetime
+from datetime import datetime, timezone
 
 PAGE_DELAY = uniform(3.0, 5.0)
 MAX_RETRIES = 3
@@ -143,7 +143,7 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:Jo
         if discard_reason:
             with conn:
                 database.write_job_to_discarded(conn, job, discard_reason,
-                    datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                   datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
                 database.delete_from_ingest(conn, row_id)
             sleep(PAGE_DELAY)
             continue

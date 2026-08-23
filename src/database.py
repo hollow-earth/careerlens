@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 from scrapers.scraper_utilities import JobListing, JobData, JobStatus
 
@@ -20,6 +20,7 @@ def connect() -> sqlite3.Connection:
     else:
         conn.row_factory = sqlite3.Row
         return conn
+
 
 def init_tables(conn: sqlite3.Connection) -> None:
     cursor = conn.cursor()
@@ -144,7 +145,7 @@ def write_job_to_staging(conn: sqlite3.Connection, job: JobData) -> None:
             job.job_id,
             job.url,
             JobStatus.PENDING.value,
-            datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         )
     )
 
@@ -202,7 +203,7 @@ def write_job_to_discarded(conn: sqlite3.Connection, job: JobData, discard_reaso
             short_score,
             reasoning,
             discard_reason,
-            datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         )
     )
 

@@ -1,6 +1,6 @@
 import sqlite3
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from playwright.sync_api import sync_playwright
@@ -70,8 +70,7 @@ def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], row: 
                 job_to_write, 
                 f"Score {job_to_write.score} below the minimum threshold of {min_score}", 
                 created_at,
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            )
+                datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
         database.delete_from_staging(conn, id)
 
 
