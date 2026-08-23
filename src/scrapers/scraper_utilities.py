@@ -65,3 +65,12 @@ class JobEntry:
     applied_at: str | datetime | None = None
     discarded_at: str | datetime | None = None
     discard_reason: str | None = None
+
+    def __post_init__(self):
+        if not self.source:
+            raise ValueError("source must be a non-empty str")
+        if not self.job_id:
+            raise ValueError("job_id must be a non-empty str")
+        if not self.url:
+            raise ValueError("url must be a non-empty str")
+

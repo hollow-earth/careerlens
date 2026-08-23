@@ -3,6 +3,10 @@ from datetime import datetime, timezone
 
 from scrapers.scraper_utilities import JobEntry, JobSource, JobStatus
 
+INGEST_REQUIRED = ("source", "job_id", "url")
+STAGING_REQUIRED = INGEST_REQUIRED + ("title", "company", "location", "description", "status")
+JOBS_REQUIRED = STAGING_REQUIRED + ("created_at", "score", "short_score", "reasoning")
+DISCARDED_REQUIRED = STAGING_REQUIRED + ("discard_reason", )
 
 def connect() -> sqlite3.Connection:
     """
@@ -130,6 +134,11 @@ def init_tables(conn: sqlite3.Connection) -> None:
     else:
         raise Exception("Version not found")
 
+
+def require_fields(job: JobEntry, fields: tuple[str, ...]) -> None:
+    missing = [field for field in fields if getattr(job, field) is None]
+    if missing:
+        raise ValueError(f"JobEntry missing required fields: {', '.join(missing)}")
 
 def write_job_to_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
     _ = conn.execute("""
