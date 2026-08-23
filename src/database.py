@@ -220,7 +220,7 @@ def delete_from_ingest(conn: sqlite3.Connection, job: JobEntry) -> None:
         DELETE FROM ingest 
         WHERE (source = ? AND job_id = ?) OR url = ?
         """,
-        (job.source, job.job_id, job.url,)
+        (job.source.value, job.job_id, job.url,)
     )
 
 
