@@ -88,6 +88,9 @@ def use_llm(config: dict[str, Any], job: JobEntry) -> JobEntry:
     Do not invent qualifications, experience, preferences, goals,
     or dealbreakers.
 
+    Internships are acceptable, so long as they do not explicitly require 
+    the candidate to be enrolled as a student.
+
     """
     
     if llm_config["career_goals"]:
@@ -296,18 +299,10 @@ def use_llm(config: dict[str, Any], job: JobEntry) -> JobEntry:
         short_score =  "🟠 Only apply if you have time (bad stretch)"
     else:
         short_score =  "🔴 Do not apply"
-    
+
+    job.status = JobStatus.PENDING_MANUAL_REVIEW
+    job.score = score
+    job.short_score = short_score
+    job.reasoning = reasoning
     # If successful: write to db
-    return JobEntry(
-        title = job.title,
-        company = job.company,
-        location = job.location,
-        description = job.description,
-        source = job.source,
-        job_id = job.job_id,
-        url = job.url,
-        status = JobStatus.PENDING_MANUAL_REVIEW,
-        score = score,
-        short_score = short_score,
-        reasoning = reasoning
-    )
+    return job

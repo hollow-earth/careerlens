@@ -32,8 +32,7 @@ def close(conn: sqlite3.Connection) -> None:
 
 def init_tables(conn: sqlite3.Connection) -> None:
     cursor = conn.cursor()
-    cursor.execute("PRAGMA user_version")
-    user_version = cursor.fetchone()[0]
+    user_version = cursor.execute("PRAGMA user_version").fetchone()[0]
     
     if  user_version == 0:
         _ = cursor.executescript("""
@@ -312,7 +311,7 @@ def get_next_staging(conn: sqlite3.Connection) -> JobEntry | None:
         company = row["company"],
         location = row["location"],
         description = row["description"],
-        source = row["source"],
+        source = JobSource(row["source"]),
         job_id = row["job_id"],
         url = row["url"],
         status = JobStatus(row["status"]),
@@ -338,3 +337,6 @@ def delete_from_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
         """,
         (job.source.value, job.job_id, job.url,)
     )
+
+def write_company_to_companies(conn: sqlite3.Connection, company: CompanyEntry) -> None:
+    

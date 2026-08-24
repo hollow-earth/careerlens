@@ -10,7 +10,7 @@ from pathlib import Path
 import database
 import llm
 from scrapers.linkedin import linkedin_scraper
-from scrapers.scraper_utilities import JobEntry, JobFilters
+from scrapers.scraper_utilities import JobEntry, JobFilters, JobStatus
 
 def load_config(path: str | Path = "config.toml") -> dict[str, Any]:
     """
@@ -59,13 +59,17 @@ def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], job: 
     # TODO: maybe this should be split into two functions?
     min_score = int(config["llm"]["minimum_score"])
     print(f"Processing job: {job.title}, at {job.company}")
+    
     job_to_write = llm.use_llm(config, job)
     job_to_write.updated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    job_to_write.discard_reason = f"Score {job_to_write.score} below the minimum threshold of {min_score}"
+    
     with conn:
         if job_to_write.score is not None and job_to_write.score >= min_score:
+            job_to_write.status = JobStatus.PENDING_MANUAL_REVIEW
             database.write_job_to_jobs(conn, job_to_write)
         else:
+            job_to_write.status = JobStatus.DISCARDED
+            job_to_write.discard_reason = f"Score {job_to_write.score} below the minimum threshold of {min_score}"
             database.write_job_to_discarded(conn, job_to_write)
         database.delete_from_staging(conn, job_to_write)
 
