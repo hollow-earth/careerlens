@@ -2,7 +2,7 @@ from random import randint
 from sqlite3.dbapi2 import Connection
 
 from src import database
-from src.scrapers.scraper_utilities import JobEntry, JobStatus, JobSource
+from src.scrapers.scraper_utilities import CompanyEntry, CompanyTrustStatus, JobEntry, JobStatus, JobSource
 
 POPULATE_NUMBER_ENTRIES = 25
 
@@ -289,7 +289,35 @@ def test_discarded_exists_in_pipeline(conn: Connection) -> None:
 # ========================================= #
 """
 
+def test_write_company_to_companies(conn: Connection) -> None:
+    a = CompanyEntry("company1", CompanyTrustStatus.TRUSTED)
+    b = CompanyEntry("company2", CompanyTrustStatus.BLOCKED)
+    c = CompanyEntry("company3", CompanyTrustStatus.UNKNOWN)
+    database.write_company_to_companies(conn, a)
+    database.write_company_to_companies(conn, a)
+    database.write_company_to_companies(conn, a)
+    database.write_company_to_companies(conn, b)
+    database.write_company_to_companies(conn, c)
+    res = conn.execute("SELECT * FROM companies").fetchall()
+    assert len(res) == 3
 
+def get_company(conn: Connection) -> None | CompanyEntry:
+    a = CompanyEntry("company1", CompanyTrustStatus.TRUSTED)
+    b = CompanyEntry("company2", CompanyTrustStatus.BLOCKED)
+    c = CompanyEntry("company3", CompanyTrustStatus.UNKNOWN)
+    database.write_company_to_companies(conn, a)
+    database.write_company_to_companies(conn, b)
+    database.write_company_to_companies(conn, c)
+
+    d = database.get_company(conn, "company1")
+    e = database.get_company(conn, "company2")
+    f = database.get_company(conn, "company3")
+    g = database.get_company(conn, "company4")
+
+    assert d is not None and d.normalized_name == "company1"
+    assert e is not None and e.normalized_name == "company2"
+    assert f is not None and f.normalized_name == "company3"
+    assert g is None
 
 
 
