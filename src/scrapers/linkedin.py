@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from random import uniform
 from re import search
 from sqlite3 import Connection
@@ -7,8 +8,15 @@ from playwright.sync_api import Browser
 from typing_extensions import Any
 
 import database
-from scrapers.scraper_utilities import JobEntry, JobStatus, JobFilters, JobSource
-from datetime import datetime, timezone
+from scrapers import scraper_utilities
+from scrapers.scraper_utilities import (
+    CompanyEntry,
+    CompanyTrustStatus,
+    JobEntry,
+    JobFilters,
+    JobSource,
+    JobStatus,
+)
 
 PAGE_DELAY = uniform(3.0, 5.0)
 MAX_RETRIES = 3
@@ -121,7 +129,8 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:Jo
         )
         job.status = JobStatus.PENDING
 
-        if filters.is_company_blacklisted(job.company):
+        candidate_company = database.get_company(conn, scraper_utilities.normalize(job.company))
+        if candidate_company is not None and candidate_company.trust_status == CompanyTrustStatus.BLOCKED:
             job.discard_reason = "Match in blacklisted_companies"
         elif filters.is_title_blacklisted(job.title):
             job.discard_reason = "Match in blacklisted_terms"
@@ -139,6 +148,7 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:Jo
                 with conn:
                     database.write_job_to_staging(conn, job)
                     database.delete_from_ingest(conn, job)
+                    database.write_company_to_companies(conn, CompanyEntry(job.company))
             except:
                 raise Exception("Couldn't move row from ingest to staging!")
             sleep(PAGE_DELAY)
