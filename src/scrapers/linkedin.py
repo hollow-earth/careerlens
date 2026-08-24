@@ -130,7 +130,7 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:Jo
         job.status = JobStatus.PENDING
 
         candidate_company = database.get_company(conn, scraper_utilities.normalize(job.company))
-        if candidate_company is not None and candidate_company.trust_status == CompanyTrustStatus.BLOCKED:
+        if candidate_company is not None and candidate_company.trust_status.value == CompanyTrustStatus.BLOCKED.value:
             job.discard_reason = "Match in blacklisted_companies"
         elif filters.is_title_blacklisted(job.title):
             job.discard_reason = "Match in blacklisted_terms"
