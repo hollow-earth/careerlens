@@ -251,7 +251,14 @@ def test_staging_exists_in_pipeline(conn: Connection) -> None:
 # ========================================= #
 """
 
-
+def test_jobs_exists_in_pipeline(conn: Connection) -> None:
+    job1 = JobEntry(JobSource.LINKEDIN, "123456789", "https://linkedin.com/123456789",
+        "SomeTitle", "SomeCompany", "SomeLocation", "SomeDescription", None, None, 100, "a", "b", "c")
+    job2 = JobEntry(JobSource.INDEED, "a7a3467cad7fdedb", "https://indeed.com/viewjob?jk=a7a3467cad7fdedb",
+        "SomeTitle", "SomeCompany", "SomeLocation", "SomeDescription", None, None, 100, "a", "b", "c")
+    database.write_job_to_jobs(conn, job1)
+    assert database.job_exists_in_pipeline(conn, job1) is True
+    assert database.job_exists_in_pipeline(conn, job2) is False
 
 
 
@@ -263,7 +270,14 @@ def test_staging_exists_in_pipeline(conn: Connection) -> None:
 # ========================================= #
 """
 
-
+def test_discarded_exists_in_pipeline(conn: Connection) -> None:
+    job1 = JobEntry(JobSource.LINKEDIN, "123456789", "https://linkedin.com/123456789",
+        "SomeTitle", "SomeCompany", "SomeLocation", "SomeDescription", None, None, 100, "a", "b", "c", discard_reason="d")
+    job2 = JobEntry(JobSource.INDEED, "a7a3467cad7fdedb", "https://indeed.com/viewjob?jk=a7a3467cad7fdedb",
+        "SomeTitle", "SomeCompany", "SomeLocation", "SomeDescription", None, None, 100, "a", "b", "c", discard_reason="d")
+    database.write_job_to_discarded(conn, job1)
+    assert database.job_exists_in_pipeline(conn, job1) is True
+    assert database.job_exists_in_pipeline(conn, job2) is False
 
 
 
@@ -293,9 +307,6 @@ def test_staging_exists_in_pipeline(conn: Connection) -> None:
 
 
 """
-def write_job_to_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
-def delete_from_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
-def get_next_staging(conn: sqlite3.Connection) -> JobEntry | None:
 
 def write_job_to_discarded(conn: sqlite3.Connection, job: JobEntry) -> None:
 
