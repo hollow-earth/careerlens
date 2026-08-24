@@ -204,7 +204,6 @@ def test_staging_get_next(conn: Connection) -> None:
     database.write_job_to_staging(conn, job4)
 
     d = database.get_next_staging(conn)
-    print(d)
     assert d is not None and d.job_id == job1.job_id
     d = database.get_next_staging(conn)
     assert d is not None and d.job_id == job1.job_id
@@ -213,14 +212,14 @@ def test_staging_get_next(conn: Connection) -> None:
     database.delete_from_staging(conn, job1)
 
     d = database.get_next_staging(conn)
+    assert d is not None and d.job_id == job2.job_id
+    database.delete_from_staging(conn, job2)
+
+    d = database.get_next_staging(conn)
     assert d is not None and d.job_id == job3.job_id
     database.delete_from_staging(conn, job3)
 
     database.write_job_to_staging(conn, job5)
-
-    d = database.get_next_staging(conn)
-    assert d is not None and d.job_id == job2.job_id
-    database.delete_from_staging(conn, job2)
     
     d = database.get_next_staging(conn)
     assert d is not None and d.job_id == job4.job_id
