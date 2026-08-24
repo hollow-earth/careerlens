@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime, timezone
 
-from scrapers.scraper_utilities import JobEntry, JobSource, JobStatus
+from scrapers.scraper_utilities import CompanyEntry, CompanyTrustStatus, JobEntry, JobSource, JobStatus
 
 INGEST_REQUIRED = ("source", "job_id", "url")
 STAGING_REQUIRED = INGEST_REQUIRED + ("title", "company", "location", "description")
@@ -128,10 +128,11 @@ def init_tables(conn: sqlite3.Connection) -> None:
         _ = cursor.executescript("""
             CREATE TABLE IF NOT EXISTS companies (
                 id INTEGER PRIMARY KEY,
-                normalized_name TEXT NOT NULL UNIQUE,
-                status TEXT NOT NULL DEFAULT 'unknown',
-                requires_cover_letter BOOLEAN
+                normalized_name TEXT NOT NULL,
+                trust_status TEXT NOT NULL DEFAULT 'unknown'
             );
+
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_company_normalized_names ON companies(normalized_name);
             """)
         conn.commit()
     else:
@@ -339,4 +340,28 @@ def delete_from_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
     )
 
 def write_company_to_companies(conn: sqlite3.Connection, company: CompanyEntry) -> None:
-    
+    _ = conn.execute("""
+            INSERT OR IGNORE INTO companies 
+            (normalized_name, trust_status)
+            VALUES (?, ?)
+        """,
+        (
+            company.normalized_name,
+            company.trust_status.value,
+        )
+    )
+
+def get_company(conn: sqlite3.Connection, company: str) -> None | CompanyEntry:
+    row = conn.execute("""
+        SELECT * FROM companies
+        WHERE normalized_name = ?
+        ORDER BY id
+        LIMIT 1
+        """, 
+        (company,)
+    ).fetchone()
+
+    return None if row is None else CompanyEntry(
+        name_input = row["normalized_name"],
+        trust_status = CompanyTrustStatus(row["trust_status"])
+    )

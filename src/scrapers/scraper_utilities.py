@@ -1,8 +1,9 @@
 import re
 import unicodedata
-from dataclasses import dataclass
-from enum import Enum
+from dataclasses import InitVar, dataclass
 from datetime import datetime
+from enum import Enum
+
 from typing_extensions import Any
 
 
@@ -45,6 +46,11 @@ class JobStatus(Enum):
     APPLIED = "applied"                             # Jobs: self-explanatory
     DISCARDED = "discarded"                         # Discarded: self-explanatory
 
+class CompanyTrustStatus(Enum):
+    TRUSTED = "trusted"
+    UNKNOWN = "unknown"
+    BLOCKED = "blocked"
+
 @dataclass 
 class JobEntry:
     source: JobSource
@@ -74,3 +80,12 @@ class JobEntry:
         if not self.url:
             raise ValueError("url must be a non-empty str")
 
+@dataclass
+class CompanyEntry:
+    name_input: InitVar[str]
+
+    trust_status: CompanyTrustStatus = CompanyTrustStatus.UNKNOWN
+    normalized_name: str = ""
+    
+    def __post_init__(self, name_input: str):
+        self.normalized_name = normalize(name_input)
