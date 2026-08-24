@@ -187,6 +187,10 @@ def write_job_to_ingest(conn: sqlite3.Connection, job: JobEntry) -> None:
 
 def write_job_to_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
     require_fields(job, STAGING_REQUIRED)
+    if job.status is None:
+        status = JobStatus.PENDING.value
+    else
+        status = job.status.value
     _ = conn.execute("""
             INSERT OR IGNORE INTO staging 
             (title, company, location, description, source, job_id, url, status, created_at)
@@ -200,7 +204,7 @@ def write_job_to_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
             job.source.value,
             job.job_id,
             job.url,
-            JobStatus.PENDING.value,
+            status,
             datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         )
     )

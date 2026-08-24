@@ -55,7 +55,7 @@ class JobEntry:
     company: str | None = None
     location: str | None = None
     description: str | None = None
-    status: JobStatus = JobStatus.PENDING
+    status: JobStatus | None = None
     resume_used: str | None = None
     score: int | None = None
     short_score: str | None = None
