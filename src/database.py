@@ -189,7 +189,7 @@ def write_job_to_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
     require_fields(job, STAGING_REQUIRED)
     if job.status is None:
         status = JobStatus.PENDING.value
-    else
+    else:
         status = job.status.value
     _ = conn.execute("""
             INSERT OR IGNORE INTO staging 
@@ -212,6 +212,10 @@ def write_job_to_staging(conn: sqlite3.Connection, job: JobEntry) -> None:
 
 def write_job_to_discarded(conn: sqlite3.Connection, job: JobEntry) -> None:
     require_fields(job, DISCARDED_REQUIRED)
+    if job.status is None:
+        status = JobStatus.DISCARDED.value
+    else:
+        status = job.status.value
     cursor = conn.cursor()
     _ = cursor.execute("""
             INSERT OR IGNORE INTO discarded 
@@ -229,7 +233,7 @@ def write_job_to_discarded(conn: sqlite3.Connection, job: JobEntry) -> None:
             job.source.value,
             job.job_id,
             job.url,
-            job.status.value,
+            status,
             job.created_at,
             job.updated_at,
             job.applied_at,
@@ -245,6 +249,10 @@ def write_job_to_discarded(conn: sqlite3.Connection, job: JobEntry) -> None:
 
 def write_job_to_jobs(conn: sqlite3.Connection, job: JobEntry) -> None:
     require_fields(job, JOBS_REQUIRED)
+    if job.status is None:
+        status = JobStatus.PENDING_MANUAL_REVIEW.value
+    else:
+        status = job.status.value
     cursor = conn.cursor()
     _ = cursor.execute("""
             INSERT OR IGNORE INTO jobs 
@@ -260,7 +268,7 @@ def write_job_to_jobs(conn: sqlite3.Connection, job: JobEntry) -> None:
             job.source.value,
             job.job_id,
             job.url,
-            JobStatus.PENDING_MANUAL_REVIEW.value,
+            status,
             job.created_at,
             datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             None,
