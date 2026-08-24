@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from scrapers.scraper_utilities import JobEntry, JobSource, JobStatus
 
 INGEST_REQUIRED = ("source", "job_id", "url")
-STAGING_REQUIRED = INGEST_REQUIRED + ("title", "company", "location", "description", "status")
+STAGING_REQUIRED = INGEST_REQUIRED + ("title", "company", "location", "description")
 JOBS_REQUIRED = STAGING_REQUIRED + ("created_at", "score", "short_score", "reasoning")
 DISCARDED_REQUIRED = STAGING_REQUIRED + ("discard_reason", )
 
