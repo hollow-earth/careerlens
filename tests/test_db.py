@@ -2,7 +2,7 @@ from random import randint
 from sqlite3.dbapi2 import Connection
 
 from src import database
-from src.scrapers.scraper_utilities import JobEntry, JobSource
+from src.scrapers.scraper_utilities import JobEntry, JobStatus, JobSource
 
 POPULATE_NUMBER_ENTRIES = 25
 
@@ -18,13 +18,12 @@ def helper_populate_ingest_entries(conn: Connection, source: JobSource, number: 
     s: set[int] = set()
     i = 0
     while i < number:
-        id = randint(1, 999999)
-        if id not in s:
-            s.add(id)
+        idx = randint(1, 999999)
+        if idx not in s:
+            s.add(idx)
             i += 1
-            job = JobEntry(source, f"{id}", f"https://linkedin.com/{id}")
+            job = JobEntry(source, f"{idx}", f"https://linkedin.com/{idx}")
             database.write_job_to_ingest(conn, job)
-            database.require_fields(job, database.INGEST_REQUIRED)
     return s
 
 
@@ -45,7 +44,7 @@ def test_ingest_dedups_on_url(conn: Connection) -> None:
 
 def test_ingest_dedups_on_job_id(conn: Connection) -> None:
     job1 = JobEntry(JobSource.LINKEDIN, "123456789", "https://linkedin.com/123456789")
-    job2 = JobEntry(JobSource.LINKEDIN, "555555555", "https://linkedin.com/123456789")
+    job2 = JobEntry(JobSource.LINKEDIN, "123456789", "https://linkedin.com/555555555")
     database.write_job_to_ingest(conn, job1)
     database.write_job_to_ingest(conn, job2)
     res = conn.execute("SELECT * FROM ingest").fetchall()
@@ -64,10 +63,10 @@ def test_ingest_delete(conn: Connection) -> None:
     s = helper_populate_ingest_entries(conn, JobSource.LINKEDIN, POPULATE_NUMBER_ENTRIES)
     N = randint(1, POPULATE_NUMBER_ENTRIES - 1)
     for _ in range(N):
-        id = s.pop()
+        idx = s.pop()
         database.delete_from_ingest(
             conn,
-            JobEntry(JobSource.LINKEDIN, f"{id}", f"https://linkedin.com/{id}")
+            JobEntry(JobSource.LINKEDIN, f"{idx}", f"https://linkedin.com/{idx}")
         )
     res = conn.execute("SELECT * FROM ingest").fetchall()
     assert len(res) == len(s)
@@ -134,14 +133,13 @@ def helper_populate_staging_entries(conn: Connection, source: JobSource, number:
     s: set[int] = set()
     i = 0
     while i < number:
-        id = randint(1, 999999)
-        if id not in s:
-            s.add(id)
+        idx = randint(1, 999999)
+        if idx not in s:
+            s.add(idx)
             i += 1
-            job = JobEntry(source, f"{id}", f"https://linkedin.com/{id}",
-                f"SomeTitle{id}", f"SomeCompany{id}", f"SomeLocation{id}", f"SomeDescription{id}")
+            job = JobEntry(source, f"{idx}", f"https://linkedin.com/{idx}",
+                f"SomeTitle{idx}", f"SomeCompany{idx}", f"SomeLocation{idx}", f"SomeDescription{idx}")
             database.write_job_to_staging(conn, job)
-            database.require_fields(job, database.STAGING_REQUIRED)
     return s
 
 
@@ -176,19 +174,64 @@ def test_staging_dedups_on_job_id(conn: Connection) -> None:
 def test_staging_delete(conn: Connection) -> None:
     s = helper_populate_staging_entries(conn, JobSource.LINKEDIN, POPULATE_NUMBER_ENTRIES)
     N = randint(1, POPULATE_NUMBER_ENTRIES - 1)
+    print(len(s), N)
     for _ in range(N):
-        id = s.pop()
+        idx = s.pop()
         database.delete_from_staging(
             conn,
-            JobEntry(JobSource.LINKEDIN, f"{id}", f"https://linkedin.com/{id}",
-                f"SomeTitle{id}", f"SomeCompany{id}", f"SomeLocation{id}", f"SomeDescription{id}")
+            JobEntry(JobSource.LINKEDIN, f"{idx}", f"https://linkedin.com/{idx}",
+                f"SomeTitle{idx}", f"SomeCompany{idx}", f"SomeLocation{idx}", f"SomeDescription{idx}")
         )
-    res = conn.execute("SELECT * FROM ingest").fetchall()
+    res = conn.execute("SELECT * FROM staging").fetchall()
+    print(len(s), len(res))
     assert len(res) == len(s)
 
 
 def test_staging_get_next(conn: Connection) -> None:
-    ...
+    job1 = JobEntry(JobSource.LINKEDIN, "123456789", "https://linkedin.com/123456789",
+        "SomeTitle123456789", "SomeCompany123456789", "SomeLocation123456789", "SomeDescription123456789", JobStatus.READY)
+    job2 = JobEntry(JobSource.INDEED, "a7a3467cad7fdedb", "https://indeed.com/viewjob?jk=a7a3467cad7fdedb",
+        "SomeTitlea7a3467cad7fdedb", "SomeCompanya7a3467cad7fdedb", "SomeLocationa7a3467cad7fdedb", "SomeDescriptiona7a3467cad7fdedb", JobStatus.READY)
+    job3 = JobEntry(JobSource.LINKEDIN, "555555555", "https://linkedin.com/555555555",
+        "SomeTitle555555555", "SomeCompany555555555", "SomeLocation555555555", "SomeDescription555555555", JobStatus.READY)
+    job4 = JobEntry(JobSource.INDEED, "84ea4a111369c8d7", "https://indeed.com/viewjob?jk=84ea4a111369c8d7",
+        "SomeTitle84ea4a111369c8d7", "SomeCompany84ea4a111369c8d7", "SomeLocation84ea4a111369c8d7", "SomeDescription84ea4a111369c8d7", JobStatus.READY)
+    job5 = JobEntry(JobSource.LINKEDIN, "555555555", "https://linkedin.com/555555555",
+        "SomeTitle555555555", "SomeCompany555555555", "SomeLocation555555555", "SomeDescription555555555", JobStatus.READY)
+    database.write_job_to_staging(conn, job1)
+    database.write_job_to_staging(conn, job2)
+    database.write_job_to_staging(conn, job3)
+    database.write_job_to_staging(conn, job4)
+
+    d = database.get_next_staging(conn)
+    print(d)
+    assert d is not None and d.job_id == job1.job_id
+    d = database.get_next_staging(conn)
+    assert d is not None and d.job_id == job1.job_id
+    d = database.get_next_staging(conn)
+    assert d is not None and d.job_id == job1.job_id
+    database.delete_from_staging(conn, job1)
+
+    d = database.get_next_staging(conn)
+    assert d is not None and d.job_id == job3.job_id
+    database.delete_from_staging(conn, job3)
+
+    database.write_job_to_staging(conn, job5)
+
+    d = database.get_next_staging(conn)
+    assert d is not None and d.job_id == job2.job_id
+    database.delete_from_staging(conn, job2)
+    
+    d = database.get_next_staging(conn)
+    assert d is not None and d.job_id == job4.job_id
+    database.delete_from_staging(conn, job4)
+
+    d = database.get_next_staging(conn)
+    assert d is not None and d.job_id == job5.job_id
+    database.delete_from_staging(conn, job5)
+
+    assert database.get_next_staging(conn) is None
+    assert database.get_next_staging(conn) is None
 
 
 def test_staging_exists_in_pipeline(conn: Connection) -> None:
