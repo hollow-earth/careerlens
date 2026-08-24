@@ -2,7 +2,7 @@ from random import randint
 from sqlite3.dbapi2 import Connection
 
 from src import database
-from src.scrapers.scraper_utilities import CompanyEntry, CompanyTrustStatus, JobEntry, JobStatus, JobSource
+from src.scrapers.scraper_utilities import CompanyEntry, CompanyTrustStatus, JobEntry, JobStatus, JobSource, normalize
 
 POPULATE_NUMBER_ENTRIES = 25
 
@@ -301,7 +301,7 @@ def test_write_company_to_companies(conn: Connection) -> None:
     res = conn.execute("SELECT * FROM companies").fetchall()
     assert len(res) == 3
 
-def get_company(conn: Connection) -> None | CompanyEntry:
+def test_get_company(conn: Connection) -> None | CompanyEntry:
     a = CompanyEntry("company1", CompanyTrustStatus.TRUSTED)
     b = CompanyEntry("company2", CompanyTrustStatus.BLOCKED)
     c = CompanyEntry("company3", CompanyTrustStatus.UNKNOWN)
@@ -319,7 +319,20 @@ def get_company(conn: Connection) -> None | CompanyEntry:
     assert f is not None and f.normalized_name == "company3"
     assert g is None
 
+def test_company_is_it_working(conn: Connection) -> None:
+    database.write_company_to_companies(conn, CompanyEntry("Company A", CompanyTrustStatus.UNKNOWN))
+    database.write_company_to_companies(conn, CompanyEntry("Company B", CompanyTrustStatus.BLOCKED))
+    database.write_company_to_companies(conn, CompanyEntry("Company C", CompanyTrustStatus.TRUSTED))
 
+    a = database.get_company(conn, normalize("Cômpaņy À"))
+    b = database.get_company(conn, normalize("Cômpaņy B"))
+    c = database.get_company(conn, normalize("Cômpaņy C"))
+    e = database.get_company(conn, normalize("Cômpaņy È"))
+
+    assert a is not None and a.trust_status.value == CompanyTrustStatus.UNKNOWN.value
+    assert b is not None and b.trust_status.value == CompanyTrustStatus.BLOCKED.value
+    assert c is not None and c.trust_status.value == CompanyTrustStatus.TRUSTED.value
+    assert e is None
 
 """
 # ========================================= #
