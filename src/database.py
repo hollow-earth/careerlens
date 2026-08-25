@@ -1,7 +1,15 @@
 import sqlite3
 from datetime import datetime, timezone
 
-from scrapers.scraper_utilities import CompanyEntry, CompanyTrustStatus, JobEntry, JobSource, JobStatus
+from typing_extensions import Any
+
+from scrapers.scraper_utilities import (
+    CompanyEntry,
+    CompanyTrustStatus,
+    JobEntry,
+    JobSource,
+    JobStatus,
+)
 
 INGEST_REQUIRED = ("source", "job_id", "url")
 STAGING_REQUIRED = INGEST_REQUIRED + ("title", "company", "location", "description")
@@ -365,3 +373,14 @@ def get_company(conn: sqlite3.Connection, company: str) -> None | CompanyEntry:
         name_input = row["normalized_name"],
         trust_status = CompanyTrustStatus(row["trust_status"])
     )
+
+def get_jobs_for_display(conn: sqlite3.Connection, limit: int = 100, offset: int = 0) -> list[Any]:
+    rows = conn.execute("""
+        SELECT *
+        FROM jobs
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+        """,
+        (limit, offset),
+    ).fetchall()
+    return rows
