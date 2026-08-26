@@ -412,3 +412,23 @@ def row_to_jobentry(row: sqlite3.Row) -> JobEntry:
 
 def rows_to_jobentry(rows: Sequence[sqlite3.Row]) -> list[JobEntry]:
     return [row_to_jobentry(row) for row in rows]
+
+def mark_job_applied(conn: sqlite3.Connection, job: JobEntry) -> None:
+    _ = conn.execute("""
+        UPDATE jobs
+        SET status = ?,
+            resume_used = ?,
+            applied_at = ?
+        WHERE source = ?
+          AND job_id = ?
+        """,
+        (
+            JobStatus.APPLIED.value,
+            job.resume_used,
+            datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            job.source.value,
+            job.job_id,
+        ),
+    )
+
+    conn.commit()

@@ -1,11 +1,23 @@
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import VerticalScroll
+from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.coordinate import Coordinate
 from textual.screen import ModalScreen
-from textual.widgets import DataTable, Footer, Header, Label, Static, Markdown
+from textual.widgets import (
+    Button,
+    DataTable,
+    Footer,
+    Header,
+    Input,
+    Label,
+    Markdown,
+    Static,
+)
+from typing_extensions import Any
 
-from database import close, connect, get_jobs_for_display
+from database import close, connect, get_jobs_for_display, mark_job_applied
+from scrapers.scraper_utilities import JobEntry, JobStatus
 
 COLUMNS = (
     ("Title", "title", 50),
@@ -28,19 +40,20 @@ class TableApp(App): # pyright: ignore[reportMissingTypeArgument]
     def __init__(self) -> None:
         super().__init__()
         self.jobs = []
+        self.conn = connect()
+        self.table: DataTable[Any]
 
     def compose(self) -> ComposeResult:
         yield Footer()
         yield DataTable()
 
     def on_mount(self) -> None:
-        conn = connect()
-        table = self.query_one(DataTable)
-        for header, _, width in COLUMNS:
-            table.add_column(header, width=width)
-        self.jobs = get_jobs_for_display(conn)
+        self.table = self.query_one(DataTable)
+        for header, key, width in COLUMNS:
+            self.table.add_column(header, key=key, width=width)
+        self.jobs = get_jobs_for_display(self.conn)
 
-        _ = table.add_rows([
+        _ = self.table.add_rows([
             (
                 truncate_text("" if job.title is None else job.title, 50),
                 truncate_text("" if job.company is None else job.company, 30),
@@ -51,18 +64,32 @@ class TableApp(App): # pyright: ignore[reportMissingTypeArgument]
             for job in self.jobs
         ])
         # TODO: add infinite scroll, it only loads the first 100 for now
-        close(conn)
 
+    def on_shutdown(self) -> None:
+        close(self.conn)
+
+    def job_view_finished(self, job: JobEntry | None) -> None:
+        if job is None:
+            return
+        
+        row = self.table.cursor_row
+        if row >= 0:
+            self.table.update_cell_at(
+                Coordinate(row, 4),
+                truncate_text(job.status.value if job.status is not None else JobStatus.APPLIED.value, 20),
+            )
+        
     def action_expand_job_view(self) -> None:
-            table = self.query_one(DataTable)
-            if table.cursor_row < 0:
-                return
-            job = self.jobs[table.cursor_row]    
-            self.push_screen(ExpandedJobView(job))
+        table = self.query_one(DataTable)
+        if table.cursor_row < 0:
+            return
+        job = self.jobs[table.cursor_row]    
+        self.push_screen(ExpandedJobView(job, self.conn), callback = self.job_view_finished)
 
 class ExpandedJobView(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
     BINDINGS = [
         Binding("escape", "close_job_view", "Close entry"),
+        Binding("a", "open_apply_view", "Apply"),
     ]
 
     CSS = """
@@ -87,21 +114,13 @@ class ExpandedJobView(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
         }
     """
 
-    def __init__(self, job) -> None:
+    def __init__(self, job, conn) -> None:
         super().__init__()
         self.job = job
+        self.conn = conn
 
     def compose(self) -> ComposeResult:
-        yield Footer()
-        
-        with VerticalScroll(id="job-view"):
-            yield Markdown(self.create_markdown())
-
-    def action_close_job_view(self) -> None:
-        self.dismiss()
-
-    def create_markdown(self) -> str:
-        return f"""
+        md = f"""
 ## {self.job.title or "No title"}
 
 **{self.job.company or "No company"}** · {self.job.location or "No location"}
@@ -134,3 +153,60 @@ URL: {self.job.url}
 
 {"Applied at: " + self.job.applied_at if self.job.applied_at else ""}
 """
+
+        yield Footer()
+        
+        with VerticalScroll(id="job-view"):
+            yield Markdown(md)
+
+    def resume_prompt_finished(self, resume: str | None) -> None:
+        if resume:
+            self.job.status = JobStatus.APPLIED
+            self.job.resume_used = resume
+            mark_job_applied(self.conn, self.job)
+            self.dismiss(self.job)
+
+    def action_close_job_view(self) -> None:
+        self.dismiss()
+
+    def action_open_apply_view(self) -> None:
+        if self.job.status == JobStatus.PENDING_MANUAL_REVIEW:
+            self.app.push_screen(ResumePrompt(), callback = self.resume_prompt_finished)
+
+
+class ResumePrompt(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
+    BINDINGS = [
+        Binding("escape", "exit_view", "Cancel"),
+    ]
+    
+    CSS = """
+    ResumePrompt {
+        align: center middle;
+    }
+    
+    #resume-prompt {
+        width: 70%;
+        height: auto;
+        padding: 2;
+        border: round $accent;
+        background: $surface;
+    }
+    
+    #resume-prompt Input {
+        margin: 1 0;
+    }
+    """
+    
+    def compose(self) -> ComposeResult:
+        with Vertical(id="resume-prompt"):
+            yield Label("Which resume did you use?")
+            yield Input(placeholder="e.g. Embedded Resume", id="resume-input")
+
+    def on_mount(self) -> None:
+        self.query_one("#resume-input", Input).focus()
+    
+    def action_exit_view(self) -> None:
+        self.dismiss()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self.dismiss(event.value)
