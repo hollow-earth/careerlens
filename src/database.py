@@ -1,4 +1,5 @@
 import sqlite3
+from collections.abc import Sequence
 from datetime import datetime, timezone
 
 from typing_extensions import Any
@@ -374,7 +375,7 @@ def get_company(conn: sqlite3.Connection, company: str) -> None | CompanyEntry:
         trust_status = CompanyTrustStatus(row["trust_status"])
     )
 
-def get_jobs_for_display(conn: sqlite3.Connection, limit: int = 100, offset: int = 0) -> list[Any]:
+def get_jobs_for_display(conn: sqlite3.Connection, limit: int = 100, offset: int = 0) -> list[JobEntry]:
     rows = conn.execute("""
         SELECT *
         FROM jobs
@@ -383,4 +384,31 @@ def get_jobs_for_display(conn: sqlite3.Connection, limit: int = 100, offset: int
         """,
         (limit, offset),
     ).fetchall()
-    return rows
+    return rows_to_jobentry(rows)
+
+def row_to_jobentry(row: sqlite3.Row) -> JobEntry:
+    keys = row.keys()
+    
+    return JobEntry(
+        source          = JobSource(row["source"]),
+        job_id          = row["job_id"],
+        url             = row["url"],
+        
+        title           = row["title"]              if "title" in keys else None,
+        company         = row["company"]            if "company" in keys else None,
+        location        = row["location"]           if "location" in keys else None,
+        description     = row["description"]        if "description" in keys else None,
+        status          = JobStatus(row["status"])  if "status" in keys else None,
+        resume_used     = row["resume_used"]        if "resume_used" in keys else None,
+        score           = row["score"]              if "score" in keys else None,
+        short_score     = row["short_score"]        if "short_score" in keys else None,
+        reasoning       = row["reasoning"]          if "reasoning" in keys else None,
+        created_at      = row["created_at"]         if "created_at" in keys else None,
+        updated_at      = row["updated_at"]         if "updated_at" in keys else None,
+        applied_at      = row["applied_at"]         if "applied_at" in keys else None,
+        discarded_at    = row["discarded_at"]       if "discarded_at" in keys else None,
+        discard_reason  = row["discard_reason"]     if "discard_reason" in keys else None,
+    )
+
+def rows_to_jobentry(rows: Sequence[sqlite3.Row]) -> list[JobEntry]:
+    return [row_to_jobentry(row) for row in rows]

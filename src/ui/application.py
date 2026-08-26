@@ -1,16 +1,18 @@
+from pydoc import describe
+
 from textual.app import App, ComposeResult
 from textual.widgets import DataTable
 from rich.text import Text
 
 from database import get_jobs_for_display, connect, close
 
-COLUMN_HEADERS = (
-        "Title", 
-        "Company", 
-        "Location", 
-        "Score", 
-        "Status", 
-    )
+COLUMNS = (
+    ("Title", "title", 50),
+    ("Company", "company", 30),
+    ("Description", "description", 30),
+    ("Score", "score", 10),
+    ("Status", "status", 20),
+)
 
 def truncate_text(value: str, width: int) -> Text:
     text = Text(value)
@@ -24,18 +26,15 @@ class TableApp(App):  # pyright: ignore[reportMissingTypeArgument]
     def on_mount(self) -> None:
         conn = connect()
         table = self.query_one(DataTable)
-        table.add_column(COLUMN_HEADERS[0], width=50)
-        table.add_column(COLUMN_HEADERS[1], width=30)
-        table.add_column(COLUMN_HEADERS[2], width=30)
-        table.add_column(COLUMN_HEADERS[3], width=10)
-        table.add_column(COLUMN_HEADERS[4], width=20)
+        for header, _, width in COLUMNS:
+            table.add_column(header, width=width)
         rows = get_jobs_for_display(conn)
         _ = table.add_rows([
             (
-                truncate_text(row["title"], 50),
-                truncate_text(row["company"], 30),
-                truncate_text(row["location"], 30),
-                truncate_text(str(row["score"]), 10),
-                truncate_text(row["status"], 20),
+                truncate_text("" if row.title is None else row.title, 50),
+                truncate_text("" if row.company is None else row.company, 30),
+                truncate_text("" if row.description is None else row.description, 30),
+                truncate_text("" if row.score is None else str(row.score), 10),
+                truncate_text("" if row.status is None else row.status.value, 20),
             ) for row in rows])
         close(conn)
