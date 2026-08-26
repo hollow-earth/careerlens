@@ -7,6 +7,6 @@ def main():
     pipeline()
 
 if __name__ == "__main__":
-    #main()
+    main()
     app = application.TableApp()
     app.run()

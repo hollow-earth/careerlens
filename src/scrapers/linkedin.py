@@ -127,8 +127,8 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:Jo
         job.description = (
             posting.locator(".show-more-less-html__markup").inner_text().strip()
         )
-        job.status = JobStatus.PENDING
-
+        job.status = JobStatus.READY
+        # TODO: change back to JobStatus.PENDING once dedup is implemented with >1 scraper
         candidate_company = database.get_company(conn, scraper_utilities.normalize(job.company))
         if candidate_company is not None and candidate_company.trust_status.value == CompanyTrustStatus.BLOCKED.value:
             job.discard_reason = "Match in blacklisted_companies"
