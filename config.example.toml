@@ -9,10 +9,6 @@ blacklisted_terms = [
     "Senior",
     "Lead",
 ]
-blacklisted_companies = [
-    "Google",
-    "Meta"
-]
 
 [linkedin]
 time_filter = 86400
