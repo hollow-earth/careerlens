@@ -432,3 +432,41 @@ def mark_job_applied(conn: sqlite3.Connection, job: JobEntry) -> None:
     )
 
     conn.commit()
+
+def mark_job_discarded(conn: sqlite3.Connection, job: JobEntry) -> None:
+    with conn:
+        _ = conn.execute("""
+            DELETE FROM jobs 
+            WHERE (source = ? AND job_id = ?) OR url = ?
+            """,
+            (job.source.value, job.job_id, job.url,)
+        )
+        
+        _ = conn.execute("""
+                INSERT OR IGNORE INTO discarded 
+                (
+                title, company, location, description, source, job_id, url,
+                status, created_at, updated_at, applied_at, resume_used, 
+                score, short_score, reasoning, discard_reason, discarded_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                job.title,
+                job.company,
+                job.location,
+                job.description,
+                job.source.value,
+                job.job_id,
+                job.url,
+                JobStatus.DISCARDED.value,
+                job.created_at,
+                job.updated_at,
+                job.applied_at,
+                job.resume_used,
+                job.score,
+                job.short_score,
+                job.reasoning,
+                job.discard_reason,
+                datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            )
+        )
