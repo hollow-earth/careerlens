@@ -1,7 +1,7 @@
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.containers import Horizontal, Vertical, VerticalScroll, HorizontalGroup
 from textual.coordinate import Coordinate
 from textual.screen import ModalScreen
 from textual.widgets import (
@@ -18,6 +18,7 @@ from typing_extensions import Any
 
 from database import close, connect, get_jobs_for_display, mark_job_applied, mark_job_discarded
 from scrapers.scraper_utilities import JobEntry, JobStatus
+from pipeline import load_config
 
 COLUMNS = (
     ("Title", "title", 50),
@@ -32,23 +33,95 @@ def truncate_text(value: str, width: int) -> Text:
     text.truncate(width, overflow="ellipsis")
     return text
 
+"""
+# ===================== #
+#        Layer 0
+# ===================== #
+"""
+
+class MainApp(App): # pyright: ignore[reportMissingTypeArgument]
+    def __init__(self) -> None:
+            super().__init__()
+            self.config = load_config()
+
+    BINDINGS = [
+        Binding("s", "expand_scrape_screen", "Scrape jobs"),
+        Binding("b", "browse_jobs", "Browse jobs"),
+        Binding("d", "toggle_dark", "Toggle dark mode"),
+    ]
+
+    CSS_PATH = "css/MainApp.css"
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock = True)
+        yield Footer()
+        with Vertical(id="menu"), Vertical(id="buttons"):
+            yield Button("Scrape Jobs", id="scrape")
+            yield Button("Browse Jobs", id="browse")
+            #yield Button("(D)iscarded Jobs", id="discarded")
+            #yield Button("(Q)uit", id="quit")
+
+    def action_expand_scrape_screen(self) -> None:
+        _ = self.push_screen(ScrapeMenu())
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "scrape":
+            self.action_expand_scrape_screen()
+
+"""
+# ===================== #
+#        Layer 1
+# ===================== #
+"""
+
+class ScrapeMenu(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
+    CSS_PATH = "css/ScrapeMenu.css"
+    
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock = True)
+        yield Footer()
+        with Vertical(id="menu"), Vertical(id="buttons"):
+            yield Button("Scrape LinkedIn", id="scrape-linkedin")
+            yield Button("Return", id="return")
+
+    def dismiss_scrape_screen(self) -> None:
+        _ = self.dismiss()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "return":
+            self.dismiss_scrape_screen()
+
+"""
+# ===================== #
+#        Layer 2
+# ===================== #
+"""
+
+class ScrapeLinkedIn(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
+    #CSS_PATH = "css/ScrapeLinkedin.css"
+    
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock = True)
+        yield Footer()
+
+    def dismiss_scrape_screen(self) -> None:
+        _ = self.dismiss()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "return":
+            self.dismiss_scrape_screen()
+
+"""
+# ===================== #
+#        Layer Unsorted
+# ===================== #
+"""
+
 class TableApp(App): # pyright: ignore[reportMissingTypeArgument]
     BINDINGS = [
         Binding("e", "expand_job_view", "Expand entry"),
     ]
-    CSS = """
-    #footer {
-        height: 1;
-    }
-    
-    #debug {
-        width: 1fr;
-    }
-    
-    Footer {
-        width: auto;
-    }
-    """
+
     def __init__(self) -> None:
         super().__init__()
         self.jobs = []
@@ -56,7 +129,6 @@ class TableApp(App): # pyright: ignore[reportMissingTypeArgument]
         self.table: DataTable[Any]
 
     def compose(self) -> ComposeResult:
-        yield Label("", id="debug")
         yield Footer()
         yield DataTable()
 

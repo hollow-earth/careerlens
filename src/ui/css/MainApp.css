@@ -1,0 +1,18 @@
+Button:focus {
+    text-style: none;
+}
+
+#menu {
+    align: center middle;
+}
+
+#buttons {
+    width: auto;
+    height: auto;
+    align: center middle;
+}
+
+#buttons Button {
+    width: 30;
+    margin: 1;
+}
