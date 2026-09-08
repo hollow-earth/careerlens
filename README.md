@@ -8,7 +8,7 @@ The goal is simple: spend less time looking for jobs and more time applying to t
 
 ## Project Status
 
-CareerLens is a working personal prototype. It is actively usable, but some features and internal components are still being refined.
+CareerLens is a working personal prototype. It is usable end-to-end, but some features and internal components are still being refined.
 
 ## How To Run
 ```bash
@@ -39,17 +39,17 @@ Playwright also requires the appropriate browser binaries to be installed. For e
 python -m playwright install firefox
 
 ### LLM Requirements
-The default configuration uses a local LLM through Ollama. The model is configurable, so hardware requirements and performance will vary depending on the model selected.
+The default configuration uses a local LLM through Ollama. The model is configurable, so hardware requirements and performance will vary depending on the model selected. The minimum recommended amount of VRAM is 4GB, as the default model `qwen3.5:4b` uses 3.4GB of RAM.
 
-I have had particularly good results with `hf.co/unsloth/Qwen3.8-27B-GGUF:UD-Q3_K_XL`, although this model is relatively demanding and requires a GPU with approximately 16 GB of VRAM. Due to a current issue with Ollama's Hugging Face model integration, installing this model may require additional manual steps. It is therefore not the default configuration.
+I have had particularly good results with hf.co/unsloth/Qwen3.8-27B-GGUF:UD-Q3_K_XL, although this model is relatively demanding and is best suited to a GPU with approximately 16 GB of VRAM. Due to a current issue with Ollama's Hugging Face model integration, installing this model may require additional manual steps. It is therefore not the default configuration.
 
 On my system, using an AMD Radeon RX 9070 XT (16 GB VRAM), a single job entry takes approximately 15 seconds to process.
 
-Each evaluation can involve a substantial amount of context. With three resumes and one job posting, approximately 8,000 tokens may be processed per evaluation. CareerLens currently allows up to 16,000 tokens of context to provide some headroom for larger inputs.
+Each evaluation can involve a substantial amount of context. For example, with three resumes and one job posting, approximately 8,000 tokens may be processed per evaluation. CareerLens currently allows up to 16,000 tokens of context to provide some headroom for larger inputs.
 
 A smaller model can be used if the default configuration is too demanding for your hardware. Performance and recommendation quality will vary depending on the model selected.
 
-## What It does
+## What It Does
 CareerLens automates much of the tedious work involved in a modern job search:
 
 - Scrapes job postings from supported job sources
@@ -106,11 +106,11 @@ One of the main design goals was to keep the application local-first. Job data, 
 ### Database Design
 CareerLens uses several SQLite tables to separate jobs at different stages of the processing pipeline:
 
-- Companies: Maintains a record of companies encountered by CareerLens. This allows the application to track companies across job postings and apply company-level filtering.
-- Ingest: The initial table for job sources where job identifiers and URLs must be collected separately from retrieving the full job posting.
-- Staging: Contains jobs with the minimum information necessary for LLM evaluation. Keeping only the required data at this stage reduces unnecessary processing and context sent to the LLM.
-- Jobs: Contains job postings that have passed the filtering and evaluation stages and that the candidate should consider applying to. This is the final destination for successfully processed jobs.
-- Discarded: Contains jobs rejected during processing, whether through keyword filtering, company filtering, manual user dismissal, or LLM evaluation. Keeping discarded jobs allows CareerLens to avoid repeatedly processing the same postings.
+- **Companies**: Maintains a record of companies encountered by CareerLens. This allows the application to track companies across job postings and apply company-level filtering.
+- **Ingest**: The initial table for job sources where job identifiers and URLs must be collected separately from retrieving the full job posting.
+- **Staging**: Contains jobs with the minimum information necessary for LLM evaluation. Keeping only the required data at this stage reduces unnecessary processing and context sent to the LLM.
+- **Jobs**: Contains job postings that have passed the filtering and evaluation stages and that the candidate should consider applying to. This is the final destination for accepted jobs.
+- **Discarded**: Contains jobs rejected during processing, whether through keyword filtering, company filtering, manual user dismissal, or LLM evaluation. Keeping discarded jobs allows CareerLens to avoid repeatedly processing the same postings.
 
 ## Current Limitations
 
@@ -118,12 +118,12 @@ CareerLens is currently a personal prototype rather than a production-ready appl
 
 Some current limitations include:
 
-- Linux is the only platform on which CareerLens has been tested. The project was specifically developed and tested on EndeavourOS using Linux kernel 7.1.9-arch1-2. Windows and macOS have not been tested.
+- Linux is the only platform on which CareerLens has been tested. The project was specifically developed and tested on EndeavourOS (Linux). Windows and macOS have not been tested.
 - Ollama must already be installed and configured, including a compatible model.
 - Playwright must already be installed and configured, including the required browser binaries.
 - The default LLM model may require significant system resources. Performance will depend heavily on the model and available hardware.
 - Job browsing currently loads a limited number of results rather than implementing full infinite scrolling (currently 100, sorted by most recent).
-- Scraping currently runs to completion once started; proper cancellation and interruption handling are planned. The current workaround is to close the UI with Ctrl+Q and terminate the underlying process with Ctrl+C
+- Scraping currently runs to completion once started; proper cancellation and interruption handling are planned. The current workaround is to close the UI with Ctrl+Q and terminate the underlying process with Ctrl+C.
 - Some internal components are functional but would benefit from further refactoring.
 - Website changes made by supported job sources may break scraper functionality.
 - Company blacklist can only be set directly through the database.
@@ -151,7 +151,7 @@ CareerLens currently accesses LinkedIn through its publicly accessible/guest-fac
 
 Automated access to third-party websites may be restricted by their terms of service, robots policies, rate limits, or other technical measures. Changes to those systems may also cause the scraper to stop working.
 
-Use CareerLens responsibly and at your own discretion. **Do not provide CareerLens with your any credentials.**
+Use CareerLens responsibly and at your own discretion. **Do not provide CareerLens with any of your credentials.**
 
 ## Motivation
 Searching for a first job in tech can mean spending hours every day reading essentially the same job postings, figuring out whether you're qualified, and deciding whether each application is worth the effort.
