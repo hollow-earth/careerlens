@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 from rich.text import Text
@@ -36,6 +37,7 @@ from scrapers.scraper_utilities import JobEntry, JobFilters, JobStatus
 class ScraperSources(Enum):
     LINKEDIN = auto()
 
+# TODO: remove this soon, redundant function but there's still old code that depends on it
 def truncate_text(value: str, width: int) -> Text:
     text = Text(value)
     text.truncate(width, overflow="ellipsis")
@@ -63,7 +65,7 @@ class MainApp(App): # pyright: ignore[reportMissingTypeArgument]
     TITLE = "CareerLens"
     ENABLE_COMMAND_PALETTE = False
     BINDINGS = [
-        Binding("d", "toggle_dark", "Toggle theme"),
+        Binding(".", "toggle_dark", "Toggle theme"),
     ]
 
     def __init__(self) -> None:
@@ -151,11 +153,140 @@ class ProcessingMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
         if event.button.id == "scrape-linkedin":
             _ = self.app.push_screen(ScrapeWebsites([ScraperSources.LINKEDIN]))
 
+    def action_exit_view(self) -> None:
+        _ = self.dismiss()
+
+class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
+    BINDINGS = [
+        Binding("e", "expand_job_view", "Expand entry"),
+        Binding("escape", "exit_view", "Cancel"),
+    ]
+    
+    def __init__(self) -> None:
+        super().__init__()
+        self.jobs = []
+        self.conn = connect()
+        self.table: DataTable[object]
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock = True)
+        yield DataTable()
+        yield Footer()
+
+    def on_mount(self) -> None:
+        self.table = self.query_one(DataTable)
+        self.jobs = get_jobs_for_display(self.conn)
+        for header, key, width in COLUMNS:
+            _ = self.table.add_column(header, key=key, width=width)
+        _ = self.table.add_rows(
+            (
+                "" if job.title is None else job.title,
+                "" if job.company is None else job.company,
+                "" if job.description is None else job.description,
+                "" if job.score is None else str(job.score),
+                "" if job.status is None else job.status.value,
+            ) 
+            for job in self.jobs
+        )
+        # TODO: add infinite scroll, it only loads the first 100 for now
+
+    def action_exit_view(self) -> None:
+        _ = self.dismiss()
+    
+    def on_shutdown(self) -> None:
+        close(self.conn)
+
+    def update_table(self, job: JobEntry | None) -> None:
+        if job is None:
+            return
+
+        # Consider replacing with row = self.jobs.index(job) which is O(n) or using a key for each row
+        row = self.table.cursor_row
+        if job.job_id != self.jobs[row].job_id or job.url != self.jobs[row].url:
+            row = self.jobs.index(job)
+
+        if row < 0 or job.status is None:
+            return
+        elif job.status.value == JobStatus.DISCARDED.value:
+            row_key = self.table.coordinate_to_cell_key(Coordinate(row, 0)).row_key
+            self.table.remove_row(row_key)
+            _ = self.jobs.pop(row)
+        elif job.status.value == JobStatus.APPLIED.value:
+            self.table.update_cell_at(Coordinate(row, 4), job.status.value)
+
+    def action_expand_job_view(self) -> None:
+        row = self.query_one(DataTable).cursor_row
+        if row < 0:
+            return
+        job = self.jobs[row]    
+        _ = self.app.push_screen(ExpandedJobView(job, self.conn), self.update_table)
+
+    
 """
 # ===================== #
 #        Layer 3
 # ===================== #
 """
+
+class ExpandedJobView(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
+    BINDINGS = [
+        Binding("escape", "close_job_view", "Close entry"),
+        Binding("a", "open_apply_view", "Apply"),
+        Binding("d", "discard_entry", "Discard"),
+    ]
+    CSS_PATH = "css/ExpandedJobView.tcss"
+
+    def __init__(self, job: JobEntry, conn) -> None:
+        super().__init__()
+        self.job = job
+        self.conn = conn
+
+    def compose(self) -> ComposeResult:
+        template = Path("./src/ui/md/ExpandedJobView.md").read_text()
+        md = template.format(
+            title       = self.job.title or "Missing title", 
+            company     = self.job.company or "Missing company",
+            location    = self.job.location or "Missing location",
+            status      = self.job.status.value if self.job.status else "Missing status",
+            resume_used = f"Resume used: {self.job.resume_used}" if self.job.resume_used else "",
+            short_score = self.job.short_score or "No short_score",
+            score       = self.job.score if self.job.score is not None else "N/A",
+            reasoning   = self.job.reasoning or "No reasoning available.",
+            description = self.job.description or "No description available.",
+            source      = self.job.source.value,
+            job_id      = self.job.job_id,
+            url         = self.job.url,
+            created_at  = f"Created at: {self.job.created_at}" if self.job.created_at else "",
+            updated_at  = f"Updated at: {self.job.updated_at}" if self.job.updated_at else "",
+            applied_at  = f"Applied at: {self.job.applied_at}" if self.job.applied_at else "",
+        )
+        with VerticalScroll(id="job-view"):
+            yield Markdown(md)
+        yield Footer()
+
+    def apply_prompt_finished(self, resume: str | None) -> None:
+        if resume:
+            self.job.status = JobStatus.APPLIED
+            self.job.resume_used = resume
+            mark_job_applied(self.conn, self.job)
+            _ = self.dismiss(self.job)
+
+    def discard_prompt_finished(self, reason: str | None) -> None:
+        if reason:
+            self.job.status = JobStatus.DISCARDED
+            self.job.discard_reason = reason
+            mark_job_discarded(self.conn, self.job)
+            _ = self.dismiss(self.job)
+
+    def action_open_apply_view(self) -> None:
+        if self.job.status == JobStatus.PENDING_MANUAL_REVIEW:
+            self.app.push_screen(ApplyPrompt(), self.apply_prompt_finished)
+
+    def action_discard_entry(self) -> None:
+        self.app.push_screen(DiscardPrompt(), callback = self.discard_prompt_finished)
+
+    def action_close_job_view(self) -> None:
+        self.dismiss()
 
 class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
     #CSS_PATH = "css/ScrapeLinkedin.css"
@@ -208,204 +339,27 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
             self.scrape_complete = True
             self.write_log(Text("Press any key to continue...", style = "#f52bfb"))
 
-
-
 """
 # ===================== #
-#        Layer Unsorted
+#        Layer 4
 # ===================== #
 """
 
-class TableApp(App): # pyright: ignore[reportMissingTypeArgument]
-    BINDINGS = [
-        Binding("e", "expand_job_view", "Expand entry"),
-    ]
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.jobs = []
-        self.conn = connect()
-        self.table: DataTable[Any]
-
-    def compose(self) -> ComposeResult:
-        yield Footer()
-        yield DataTable()
-
-    def on_mount(self) -> None:
-        self.table = self.query_one(DataTable)
-        for header, key, width in COLUMNS:
-            self.table.add_column(header, key=key, width=width)
-        self.jobs = get_jobs_for_display(self.conn)
-
-        _ = self.table.add_rows([
-            (
-                truncate_text("" if job.title is None else job.title, 50),
-                truncate_text("" if job.company is None else job.company, 30),
-                truncate_text("" if job.description is None else job.description, 30),
-                truncate_text("" if job.score is None else str(job.score), 10),
-                truncate_text("" if job.status is None else job.status.value, 20),
-            ) 
-            for job in self.jobs
-        ])
-        # TODO: add infinite scroll, it only loads the first 100 for now
-
-    def on_shutdown(self) -> None:
-        close(self.conn)
-
-    def job_view_finished(self, job: JobEntry | None) -> None:
-        if job is None:
-            return
-        
-        row = self.table.cursor_row
-        if row >= 0:
-            if job.status is not None and job.status.value == JobStatus.DISCARDED.value:
-                row_key = self.table.coordinate_to_cell_key(Coordinate(row, 0)).row_key
-                self.query_one("#debug", Label).update(f"Block reached, row {row}")
-                self.table.remove_row(row_key)
-                self.jobs.pop(row)
-            else:
-                self.table.update_cell_at(
-                    Coordinate(row, 4),
-                    truncate_text(job.status.value if job.status is not None else JobStatus.APPLIED.value, 20),
-                )
-        
-    def action_expand_job_view(self) -> None:
-        table = self.query_one(DataTable)
-        if table.cursor_row < 0:
-            return
-        job = self.jobs[table.cursor_row]    
-        self.push_screen(ExpandedJobView(job, self.conn), callback = self.job_view_finished)
-
-class ExpandedJobView(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
-    BINDINGS = [
-        Binding("escape", "close_job_view", "Close entry"),
-        Binding("a", "open_apply_view", "Apply"),
-        Binding("d", "discard_entry", "Discard"),
-    ]
-
-    CSS = """
-        ExpandedJobView {
-            align: center middle;
-        }
-    
-        VerticalScroll {
-            width: 80%;
-            height: 80%;
-            border: round $accent;
-            background: $surface;
-            padding: 1 2;
-        }
-
-        Markdown {
-            text-align: left;
-        }
-
-        MarkdownH1 {
-            text-align: left;
-        }
-    """
-
-    def __init__(self, job: JobEntry, conn) -> None:
-        super().__init__()
-        self.job = job
-        self.conn = conn
-
-    def compose(self) -> ComposeResult:
-        md = f"""
-## {self.job.title or "No title"}
-
-**{self.job.company or "No company"}** · {self.job.location or "No location"}
-
-Status: {self.job.status.value if self.job.status is not None else "No status"}\n
-{"Resume used: " + self.job.resume_used if self.job.resume_used else ""}
-
-### Score
-
-{self.job.short_score if self.job.short_score else "No short_score"} — **{self.job.score if self.job.score is not None else "N/A"}/100**
-
-### Reasoning
-
-{self.job.reasoning or "No reasoning available."}
-
-### Description
-
-{self.job.description or "No description available."}
-
-### Metadata
-Source: {self.job.source.value}
-
-Job ID: {self.job.job_id}
-
-URL: {self.job.url}
-
-{"Created at: " + str(self.job.created_at) if self.job.created_at else ""}
-
-{"Updated at: " + str(self.job.updated_at) if self.job.updated_at else ""}
-
-{"Applied at: " + str(self.job.applied_at) if self.job.applied_at else ""}
-"""
-
-        yield Footer()
-        
-        with VerticalScroll(id="job-view"):
-            yield Markdown(md)
-
-    def resume_prompt_finished(self, resume: str | None) -> None:
-        if resume:
-            self.job.status = JobStatus.APPLIED
-            self.job.resume_used = resume
-            mark_job_applied(self.conn, self.job)
-            self.dismiss(self.job)
-
-    def discard_prompt_finished(self, reason: str | None) -> None:
-        if reason:
-            self.job.discard_reason = reason
-            self.job.status = JobStatus.DISCARDED
-            mark_job_discarded(self.conn, self.job)
-            self.dismiss(self.job)
-
-    def action_close_job_view(self) -> None:
-        self.dismiss()
-
-    def action_open_apply_view(self) -> None:
-        if self.job.status == JobStatus.PENDING_MANUAL_REVIEW:
-            self.app.push_screen(ResumePrompt(), callback = self.resume_prompt_finished)
-
-    def action_discard_entry(self) -> None:
-        self.app.push_screen(DiscardPrompt(), callback = self.discard_prompt_finished)
-
-
-class ResumePrompt(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
+class ApplyPrompt(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
     BINDINGS = [
         Binding("escape", "exit_view", "Cancel"),
     ]
-    
-    CSS = """
-    ResumePrompt {
-        align: center middle;
-    }
-    
-    #resume-prompt {
-        width: 70%;
-        height: auto;
-        padding: 2;
-        border: round $accent;
-        background: $surface;
-    }
-    
-    #resume-prompt Input {
-        margin: 1 0;
-    }
-    """
-    
+
+    CSS_PATH = "css/ApplyPrompt.tcss"
+
     def compose(self) -> ComposeResult:
-        with Vertical(id="resume-prompt"):
+        with Vertical(id="apply-prompt"):
             yield Label("Which resume did you use?")
-            yield Input(placeholder="e.g. Embedded Resume", id="resume-input")
+            yield Input(placeholder="e.g. Software Engineering", id="resume-input")
 
     def on_mount(self) -> None:
         self.query_one("#resume-input", Input).focus()
-    
+
     def action_exit_view(self) -> None:
         self.dismiss()
 
@@ -416,24 +370,8 @@ class DiscardPrompt(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
     BINDINGS = [
         Binding("escape", "exit_view", "Cancel"),
     ]
-    
-    CSS = """
-    DiscardPrompt {
-        align: center middle;
-    }
-    
-    #discard-prompt {
-        width: 70%;
-        height: auto;
-        padding: 2;
-        border: round $accent;
-        background: $surface;
-    }
-    
-    #disacrd-prompt Input {
-        margin: 1 0;
-    }
-    """
+
+    CSS_PATH = "css/DiscardPrompt.tcss"
     
     def compose(self) -> ComposeResult:
         with Vertical(id="discard-prompt"):
@@ -442,7 +380,7 @@ class DiscardPrompt(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
 
     def on_mount(self) -> None:
         self.query_one("#discard-input", Input).focus()
-    
+
     def action_exit_view(self) -> None:
         self.dismiss()
 

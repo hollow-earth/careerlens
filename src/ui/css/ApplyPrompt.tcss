@@ -1,0 +1,15 @@
+ApplyPrompt {
+    align: center middle;
+}
+
+#apply-prompt {
+    width: 70%;
+    height: auto;
+    padding: 2;
+    border: round $accent;
+    background: $surface;
+}
+
+#apply-prompt Input {
+    margin: 1 0;
+}
