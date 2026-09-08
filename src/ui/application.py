@@ -43,14 +43,6 @@ def truncate_text(value: str, width: int) -> Text:
     text.truncate(width, overflow="ellipsis")
     return text
 
-COLUMNS = (
-    ("Title", "title", 50),
-    ("Company", "company", 30),
-    ("Description", "description", 30),
-    ("Score", "score", 10),
-    ("Status", "status", 20),
-)
-
 SCRAPERS = {
     ScraperSources.LINKEDIN: linkedin_scraper,
 }
@@ -157,6 +149,14 @@ class ProcessingMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
         _ = self.dismiss()
 
 class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
+    COLUMNS = (
+        ("Title", "title", 50),
+        ("Company", "company", 30),
+        ("Description", "description", 30),
+        ("Score", "score", 10),
+        ("Status", "status", 20),
+    )
+    
     BINDINGS = [
         Binding("e", "expand_job_view", "Expand entry"),
         Binding("escape", "exit_view", "Cancel"),
@@ -176,7 +176,7 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
     def on_mount(self) -> None:
         self.table = self.query_one(DataTable)
         self.jobs = get_jobs_for_display(self.conn)
-        for header, key, width in COLUMNS:
+        for header, key, width in self.COLUMNS:
             _ = self.table.add_column(header, key=key, width=width)
         _ = self.table.add_rows(
             (
@@ -221,7 +221,6 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
         job = self.jobs[row]    
         _ = self.app.push_screen(ExpandedJobView(job, self.conn), self.update_table)
 
-    
 """
 # ===================== #
 #        Layer 3
