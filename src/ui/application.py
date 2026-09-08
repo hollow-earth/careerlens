@@ -1,7 +1,11 @@
+from enum import Enum, auto
+
+from playwright.sync_api import sync_playwright
 from rich.text import Text
+from textual import work, events
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical, VerticalScroll, HorizontalGroup
+from textual.containers import Horizontal, HorizontalGroup, Vertical, VerticalScroll
 from textual.coordinate import Coordinate
 from textual.screen import ModalScreen
 from textual.widgets import (
@@ -12,13 +16,30 @@ from textual.widgets import (
     Input,
     Label,
     Markdown,
-    Static,
+    RichLog,
 )
-from typing_extensions import Any
+from typing_extensions import Any, cast
 
-from database import close, connect, get_jobs_for_display, mark_job_applied, mark_job_discarded
-from scrapers.scraper_utilities import JobEntry, JobStatus
-from pipeline import load_config
+from database import (
+    close,
+    connect,
+    get_jobs_for_display,
+    init_tables,
+    mark_job_applied,
+    mark_job_discarded,
+)
+from pipeline import load_config, load_filters
+from scrapers.linkedin import linkedin_scraper
+from scrapers.scraper_utilities import JobEntry, JobFilters, JobStatus
+
+
+class ScraperSources(Enum):
+    LINKEDIN = auto()
+
+def truncate_text(value: str, width: int) -> Text:
+    text = Text(value)
+    text.truncate(width, overflow="ellipsis")
+    return text
 
 COLUMNS = (
     ("Title", "title", 50),
@@ -28,10 +49,9 @@ COLUMNS = (
     ("Status", "status", 20),
 )
 
-def truncate_text(value: str, width: int) -> Text:
-    text = Text(value)
-    text.truncate(width, overflow="ellipsis")
-    return text
+SCRAPERS = {
+    ScraperSources.LINKEDIN: linkedin_scraper,
+}
 
 """
 # ===================== #
@@ -40,17 +60,19 @@ def truncate_text(value: str, width: int) -> Text:
 """
 
 class MainApp(App): # pyright: ignore[reportMissingTypeArgument]
-    def __init__(self) -> None:
-            super().__init__()
-            self.config = load_config()
-
+    TITLE = "CareerLens"
+    ENABLE_COMMAND_PALETTE = False
     BINDINGS = [
         Binding("s", "expand_scrape_screen", "Scrape jobs"),
         Binding("b", "browse_jobs", "Browse jobs"),
-        Binding("d", "toggle_dark", "Toggle dark mode"),
+        Binding("d", "toggle_dark", "Toggle theme"),
     ]
-
     CSS_PATH = "css/MainApp.css"
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.config: dict[str, object] = load_config()
+        self.filters: JobFilters = load_filters(self.config)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock = True)
@@ -58,8 +80,6 @@ class MainApp(App): # pyright: ignore[reportMissingTypeArgument]
         with Vertical(id="menu"), Vertical(id="buttons"):
             yield Button("Scrape Jobs", id="scrape")
             yield Button("Browse Jobs", id="browse")
-            #yield Button("(D)iscarded Jobs", id="discarded")
-            #yield Button("(Q)uit", id="quit")
 
     def action_expand_scrape_screen(self) -> None:
         _ = self.push_screen(ScrapeMenu())
@@ -67,6 +87,15 @@ class MainApp(App): # pyright: ignore[reportMissingTypeArgument]
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "scrape":
             self.action_expand_scrape_screen()
+
+    def on_shutdown(self) -> None:
+        ...
+
+    """
+        linkedin_scraper(conn, browser, config, filters)
+    
+    # TODO: deduplicate_staging()
+    drain_staging(conn, config)"""
 
 """
 # ===================== #
@@ -76,6 +105,9 @@ class MainApp(App): # pyright: ignore[reportMissingTypeArgument]
 
 class ScrapeMenu(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
     CSS_PATH = "css/ScrapeMenu.css"
+
+    def __init__(self):
+        super().__init__()
     
     def compose(self) -> ComposeResult:
         yield Header(show_clock = True)
@@ -90,6 +122,8 @@ class ScrapeMenu(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "return":
             self.dismiss_scrape_screen()
+        if event.button.id == "scrape-linkedin":
+            _ = self.app.push_screen(ScrapeWebsites([ScraperSources.LINKEDIN]))
 
 """
 # ===================== #
@@ -97,19 +131,57 @@ class ScrapeMenu(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
 # ===================== #
 """
 
-class ScrapeLinkedIn(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
+class ScrapeWebsites(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
     #CSS_PATH = "css/ScrapeLinkedin.css"
-    
+    def __init__(self, scraper_sources: list[ScraperSources]) -> None:
+        super().__init__()
+        self.scraper_sources: list[ScraperSources] = scraper_sources
+        self.scrape_complete = False
+
     def compose(self) -> ComposeResult:
         yield Header(show_clock = True)
+        yield RichLog(id = "log")
         yield Footer()
+        yield Button("Test", id="sneed")
 
-    def dismiss_scrape_screen(self) -> None:
+    def dismiss_scrape_linkedin_screen(self) -> None:
         _ = self.dismiss()
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "return":
-            self.dismiss_scrape_screen()
+    def on_mount(self) -> None:
+        self.run_scraper()
+
+    def write_log(self, message: Text) -> None:
+        log = self.query_one("#log", RichLog)
+        _ = log.write(message)
+
+    def on_key(self, event: events.Key) -> None:
+        if self.scrape_complete:
+            _ = event.stop()
+            self.dismiss_scrape_linkedin_screen()
+    
+    @work(thread=True)
+    def run_scraper(self) -> None:
+        app = cast(MainApp, self.app)   # basedpyright workaround
+
+        def progress_callback(message: Text) -> None:
+            self.app.call_from_thread(self.write_log, message)
+
+        conn = connect()
+        try:
+            init_tables(conn)
+
+            with sync_playwright() as p:
+                browser = p.firefox.launch(headless = True)
+                for source in self.scraper_sources:
+                    s = SCRAPERS[source]
+                    s(conn, app.config, app.filters, browser, progress_callback)
+
+        finally:
+            close(conn)
+            self.scrape_complete = True
+            self.write_log(Text("Press any key to continue...", style = "#f52bfb"))
+
+
 
 """
 # ===================== #

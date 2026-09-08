@@ -3,7 +3,6 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-from playwright.sync_api import sync_playwright
 from tomllib import load
 from pathlib import Path
 
@@ -95,24 +94,3 @@ def drain_staging(conn: sqlite3.Connection, config: dict[str, Any]) -> None:
         end_time = time.perf_counter()
         execution_time = end_time - start_time
         print(f"Processing took {execution_time:.6f}s.\n")
-
-
-def pipeline():
-    config = load_config()
-    filters = load_filters(config)
-    conn = database.connect()
-    try:
-        database.init_tables(conn)
-
-        with sync_playwright() as p:
-            browser = p.firefox.launch(headless=False) # TODO: switch to True when tests are over
-            linkedin_scraper(conn, browser, config, filters)
-       
-        # TODO: deduplicate_staging()
-        drain_staging(conn, config)
-            
-    finally:
-        try:
-            database.close(conn)
-        except sqlite3.Error as error:
-            print(f"Error: {error}")

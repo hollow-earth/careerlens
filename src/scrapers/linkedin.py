@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from datetime import datetime, timezone
 from random import uniform
 from re import search
@@ -5,6 +6,7 @@ from sqlite3 import Connection
 from time import sleep
 
 from playwright.sync_api import Browser
+from rich.text import Text
 from typing_extensions import Any
 
 import database
@@ -20,8 +22,9 @@ from scrapers.scraper_utilities import (
 
 PAGE_DELAY = uniform(3.0, 5.0)
 MAX_RETRIES = 3
+ProgressCallback = Callable[[Text], None]
 
-def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, Any]) -> None:
+def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, Any], progress_callback: ProgressCallback) -> None:
     # TODO: put that in scraper_utilities
     keywords = " OR ".join(f'"{item}"' for item in config["search"]["keywords"])
     location = config["search"]["location"]
@@ -68,7 +71,7 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
         try:
             scraped_url = current_job.locator(".base-card__full-link").get_attribute("href")
         except:
-            print(f"Scraping attempt failed")
+            progress_callback(Text(f"Scraping attempt failed"))
             continue
         # TODO: assert has to be reaplced in the future with proper exceptions
         assert scraped_url is not None, (
@@ -86,7 +89,9 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
         if not database.job_exists_in_pipeline(conn, job):
             with conn:
                 database.write_job_to_ingest(conn, job)
-            print("Scraped job:", job_id, " ", scraped_url)
+            progress_callback(Text(f"Scraped job with job_id {job_id}"))
+        else:
+            progress_callback(Text(f"Job with job_id {job_id} already in database!"))
 
         # Load more jobs if needed, then update the current list of jobs, then grab the next
         show_more_jobs_button = page.locator(".infinite-scroller__show-more-button")
@@ -103,7 +108,7 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
     page.close()
 
 
-def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:JobFilters) -> None:
+def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:JobFilters, progress_callback: ProgressCallback) -> None:
     page = browser.new_page()
     while True:
         job = database.get_next_ingest(conn, JobSource.LINKEDIN)
@@ -129,11 +134,15 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:Jo
         )
         job.status = JobStatus.READY
         # TODO: change back to JobStatus.PENDING once dedup is implemented with >1 scraper
+
+        progress_callback(Text(f"Found job {job.title} at {job.company} with job ID {job.job_id}"))
         candidate_company = database.get_company(conn, scraper_utilities.normalize(job.company))
         if candidate_company is not None and candidate_company.trust_status.value == CompanyTrustStatus.BLOCKED.value:
             job.discard_reason = "Match in blacklisted_companies"
+            progress_callback(Text("\t Job discarded due to match in blacklisted_companies"))
         elif filters.is_title_blacklisted(job.title):
             job.discard_reason = "Match in blacklisted_terms"
+            progress_callback(Text("\t Job discarded due to match in blacklisted_terms"))
 
         if job.discard_reason:
             job.discarded_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -156,6 +165,11 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:Jo
     page.close()
 
 
-def linkedin_scraper(conn: Connection, browser: Browser, config: dict[str, Any], filters: JobFilters) -> None:
-    linkedin_scrape_urls(conn, browser, config)
-    linkedin_extract_url_contents(conn, browser, filters)
+def linkedin_scraper(conn: Connection, config: dict[str, object], filters: JobFilters, browser: Browser, callback: ProgressCallback) -> None:
+    callback(Text("Scraping LinkedIn URLs...", style="#f52bfb"))
+    linkedin_scrape_urls(conn, browser, config, callback)
+    callback(Text("Finished scraping LinkedIn URLs.", style="#f52bfb"))
+
+    callback(Text("Extracting LinkedIn job contents...", style="#f52bfb"))
+    linkedin_extract_url_contents(conn, browser, filters, callback)
+    callback(Text("Finished extracting LinkedIn job contents.", style="#f52bfb"))
