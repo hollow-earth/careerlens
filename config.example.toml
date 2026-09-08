@@ -16,7 +16,7 @@ distance = 0
 
 [llm]
 model = "qwen3.5:4b"
-minimum_score = 75
+minimum_score = 50
 apply_immediately_threshold = 75
 good_stretch_threshold = 60
 bad_stretch_threshold = 50
