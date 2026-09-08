@@ -29,7 +29,7 @@ from database import (
     mark_job_applied,
     mark_job_discarded,
 )
-from pipeline import load_config, load_filters
+from pipeline import load_config, load_filters, drain_staging
 from scrapers.linkedin import linkedin_scraper
 from scrapers.scraper_utilities import JobEntry, JobFilters, JobStatus
 
@@ -119,6 +119,7 @@ class MainMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
 class ProcessingMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
     BINDINGS = [
         Binding("l", "scrape_linkedin", "Scrape LinkedIn"),
+        Binding("d", "drain_staging", "Drain Staging"),
         Binding("escape", "exit_view", "Cancel"),
     ]
     CSS_PATH = "css/ScrapeMenu.tcss"
@@ -131,19 +132,23 @@ class ProcessingMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
         yield Footer()
         with Vertical(id="menu"), Vertical(id="buttons"):
             yield Button("Scrape LinkedIn", id="scrape-linkedin")
+            yield Button("Drain Staging", id="drain-staging")
             yield Button("Return", id="return")
-
-    def dismiss_scrape_screen(self) -> None:
-        _ = self.dismiss()
 
     def action_scrape_linkedin(self) -> None:
         _ = self.app.push_screen(ScrapeWebsites([ScraperSources.LINKEDIN]))
 
+    # TODO: replace this at some point; break up pipeline.drain_staging into different functions
+    def action_drain_staging(self) -> None:
+        _ = self.app.push_screen(DrainStaging())
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "return":
-            self.dismiss_scrape_screen()
+            _ = self.dismiss()
         if event.button.id == "scrape-linkedin":
             _ = self.app.push_screen(ScrapeWebsites([ScraperSources.LINKEDIN]))
+        if event.button.id == "drain-staging":
+            _ = self.action_drain_staging()
 
     def action_exit_view(self) -> None:
         _ = self.dismiss()
@@ -336,6 +341,48 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
         finally:
             close(conn)
             self.scrape_complete = True
+            self.write_log(Text("Press any key to continue...", style = "#f52bfb"))
+
+class DrainStaging(Screen): # pyright: ignore[reportMissingTypeArgument]
+    #CSS_PATH = "css/ScrapeLinkedin.css"
+    def __init__(self) -> None:
+        super().__init__()
+        self.drain_staging_complete: bool = False
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock = True)
+        yield RichLog(id = "log")
+        yield Footer()
+        yield Button("Test", id="sneed")
+
+    def on_mount(self) -> None:
+        self.run_drain_staging()
+
+    def write_log(self, message: Text) -> None:
+        log = self.query_one("#log", RichLog)
+        _ = log.write(message)
+
+    def on_key(self, event: events.Key) -> None:
+        if self.drain_staging_complete:
+            _ = event.stop()
+            _ = self.dismiss()
+    
+    @work(thread=True)
+    def run_drain_staging(self) -> None:
+        # TODO: implement a way to quit halfway through with a button, ^q, and ^c
+        app = cast(MainApp, self.app)   # basedpyright workaround
+
+        def progress_callback(message: Text) -> None:
+            self.app.call_from_thread(self.write_log, message)
+
+        conn = connect()
+        try:
+            init_tables(conn)
+            drain_staging(conn, app.config, progress_callback)
+
+        finally:
+            close(conn)
+            self.drain_staging_complete = True
             self.write_log(Text("Press any key to continue...", style = "#f52bfb"))
 
 """

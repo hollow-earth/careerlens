@@ -1,13 +1,15 @@
+from collections.abc import Callable
 import json
-from dataclasses import dataclass
 
 import ollama
+from rich.text import Text
 from typing_extensions import Any
 
 from scrapers.scraper_utilities import JobEntry, JobStatus
 
+ProgressCallback = Callable[[Text], None]
 
-def generate_response(config: dict[str, Any], prompt: str) -> str:
+def generate_response(config: dict[str, Any], prompt: str, progress_callback: ProgressCallback) -> str:
     try:
         response = ollama.generate(
             model = config["llm"]["model"], 
@@ -22,13 +24,13 @@ def generate_response(config: dict[str, Any], prompt: str) -> str:
         gen_sec = response['eval_duration'] / 1e9
         prompt_rate = prompt_tokens / prompt_sec if prompt_sec > 0 else 0
         gen_rate = gen_tokens / gen_sec if gen_sec > 0 else 0
-        print(f"Prompt Eval Count:    {prompt_tokens} tokens")
-        print(f"Prompt Eval Duration: {prompt_sec:.2f}s")
-        print(f"Prompt Eval Rate:     {prompt_rate:.2f} tokens/s")
+        progress_callback(Text(f"\t Prompt Eval Count:    {prompt_tokens} tokens"))
+        progress_callback(Text(f"\t Prompt Eval Duration: {prompt_sec:.2f}s"))
+        progress_callback(Text(f"\t Prompt Eval Rate:     {prompt_rate:.2f} tokens/s"))
         
-        print(f"Generation Count:     {gen_tokens} tokens")
-        print(f"Generation Duration:  {gen_sec:.2f}s")
-        print(f"Generation Rate:      {gen_rate:.2f} tokens/s")
+        progress_callback(Text(f"\t Generation Count:     {gen_tokens} tokens"))
+        progress_callback(Text(f"\t Generation Duration:  {gen_sec:.2f}s"))
+        progress_callback(Text(f"\t Generation Rate:      {gen_rate:.2f} tokens/s"))
         
         return response["response"]
     except:
@@ -61,7 +63,7 @@ def parse_llm_response(config: dict[str, Any], response: str) -> tuple[int, str]
 
     return (score, reasoning)
 
-def use_llm(config: dict[str, Any], job: JobEntry) -> JobEntry:
+def use_llm(config: dict[str, Any], job: JobEntry, progress_callback: ProgressCallback) -> JobEntry:
     llm_config = config["llm"]
     prompt = """
     <INSTRUCTIONS>
@@ -283,7 +285,7 @@ def use_llm(config: dict[str, Any], job: JobEntry) -> JobEntry:
     MAX_RETRIES = 3
     for attempt in range(MAX_RETRIES):
         try:
-            response_candidate = generate_response(config, prompt)
+            response_candidate = generate_response(config, prompt, progress_callback)
             score, reasoning = parse_llm_response(config, response_candidate)
             break
         except:
