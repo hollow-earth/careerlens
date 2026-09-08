@@ -239,7 +239,7 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
 
     def action_expand_job_view(self) -> None:
         row = self.query_one(DataTable).cursor_row
-        if row < 0:
+        if row < 0 or row >= len(self.jobs):
             return
         job = self.jobs[row]    
         _ = self.app.push_screen(ExpandedJobView(job, self.conn), self.update_table)
