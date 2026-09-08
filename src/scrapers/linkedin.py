@@ -51,11 +51,9 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
     dismiss_button = page.get_by_role("button", name="Dismiss")
     if dismiss_button.count() and dismiss_button.is_visible():
         dismiss_button.click()
-    # TODO: this might make the program crash, add a check later
     page.get_by_role("button", name="Reject").click()
     # page.get_by_role("button", name="Close").click()
 
-    # TODO: scroll to bottom to load all of the jobs
     job_cards = page.locator("ul.jobs-search__results-list > li")
     count = job_cards.count()
     i = 0
