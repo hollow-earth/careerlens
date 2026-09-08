@@ -15,7 +15,7 @@ time_filter = 86400
 distance = 0
 
 [llm]
-model = "hf.co/unsloth/Qwen3.5-9B-GGUF:UD-IQ2_XXS"
+model = "qwen3.5:4b"
 minimum_score = 75
 apply_immediately_threshold = 75
 good_stretch_threshold = 60
