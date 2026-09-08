@@ -63,37 +63,21 @@ class MainApp(App): # pyright: ignore[reportMissingTypeArgument]
     TITLE = "CareerLens"
     ENABLE_COMMAND_PALETTE = False
     BINDINGS = [
-        Binding("s", "expand_scrape_screen", "Scrape jobs"),
-        Binding("b", "browse_jobs", "Browse jobs"),
         Binding("d", "toggle_dark", "Toggle theme"),
     ]
-    CSS_PATH = "css/MainApp.css"
 
     def __init__(self) -> None:
         super().__init__()
         self.config: dict[str, object] = load_config()
         self.filters: JobFilters = load_filters(self.config)
 
-    def compose(self) -> ComposeResult:
-        yield Header(show_clock = True)
-        yield Footer()
-        with Vertical(id="menu"), Vertical(id="buttons"):
-            yield Button("Scrape Jobs", id="scrape")
-            yield Button("Browse Jobs", id="browse")
-
-    def action_expand_scrape_screen(self) -> None:
-        _ = self.push_screen(ScrapeMenu())
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "scrape":
-            self.action_expand_scrape_screen()
+    def on_mount(self) -> None:
+        self.push_screen(MainMenu())
 
     def on_shutdown(self) -> None:
         ...
 
     """
-        linkedin_scraper(conn, browser, config, filters)
-    
     # TODO: deduplicate_staging()
     drain_staging(conn, config)"""
 
@@ -103,7 +87,42 @@ class MainApp(App): # pyright: ignore[reportMissingTypeArgument]
 # ===================== #
 """
 
-class ScrapeMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
+class MainMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
+    BINDINGS = [
+        Binding("s", "expand_process_screen", "Scrape jobs"),
+        Binding("b", "expand_jobs_screen", "Browse jobs"),
+    ]
+    CSS_PATH = "css/MainMenu.css"
+    
+    def __init__(self) -> None:
+        super().__init__()
+    
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock = True)
+        yield Footer()
+        with Vertical(id="menu"), Vertical(id="buttons"):
+            yield Button("Process Jobs", id="process-jobs")
+            yield Button("Browse Jobs", id="browse-jobs")
+
+    def action_expand_process_screen(self) -> None:
+        _ = self.app.push_screen(ProcessingMenu())
+
+    def action_expand_jobs_screen(self) -> None:
+        _ = self.app.push_screen(JobTable())
+    
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "process-jobs":
+            self.action_expand_process_screen()
+        if event.button.id == "browse-jobs":
+            self.action_expand_jobs_screen()
+
+"""
+# ===================== #
+#        Layer 2
+# ===================== #
+"""
+
+class ProcessingMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
     CSS_PATH = "css/ScrapeMenu.css"
 
     def __init__(self):
@@ -127,7 +146,7 @@ class ScrapeMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
 
 """
 # ===================== #
-#        Layer 2
+#        Layer 3
 # ===================== #
 """
 
