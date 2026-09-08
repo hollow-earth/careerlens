@@ -28,7 +28,7 @@ python -m pip install -r requirements.txt
 python src/main.py
 ```
 
-# Requirements
+## Requirements
 - Python 3.14 (tested; other versions may work but are untested)
 - Ollama for local LLM evaluation
 - Playwright
@@ -38,7 +38,16 @@ Playwright also requires the appropriate browser binaries to be installed. For e
 
 python -m playwright install firefox
 
-The default configuration uses a local LLM, so performance and hardware requirements will vary depending on the model being used.
+### LLM Requirements
+The default configuration uses a local LLM through Ollama. The model is configurable, so hardware requirements and performance will vary depending on the model selected.
+
+I have had particularly good results with `hf.co/unsloth/Qwen3.8-27B-GGUF:UD-Q3_K_XL`, although this model is relatively demanding and requires a GPU with approximately 16 GB of VRAM. Due to a current issue with Ollama's Hugging Face model integration, installing this model may require additional manual steps. It is therefore not the default configuration.
+
+On my system, using an AMD Radeon RX 9070 XT (16 GB VRAM), a single job entry takes approximately 15 seconds to process.
+
+Each evaluation can involve a substantial amount of context. With three resumes and one job posting, approximately 8,000 tokens may be processed per evaluation. CareerLens currently allows up to 16,000 tokens of context to provide some headroom for larger inputs.
+
+A smaller model can be used if the default configuration is too demanding for your hardware. Performance and recommendation quality will vary depending on the model selected.
 
 ## What It does
 CareerLens automates much of the tedious work involved in a modern job search:
