@@ -1,5 +1,5 @@
 [search]
-location = "Vancouver"
+location = "Toronto, Ontario, Canada"
 keywords = [
     "DevOps",
     "SRE",
@@ -15,7 +15,7 @@ time_filter = 86400
 distance = 0
 
 [llm]
-model = "gemma4"
+model = "hf.co/unsloth/Qwen3.8-27B-GGUF:UD-Q3_K_XL"
 minimum_score = 75
 apply_immediately_threshold = 75
 good_stretch_threshold = 60
@@ -61,5 +61,62 @@ dealbreakers = [
     "Unpaid work",
 ]
 resume = """
-Paste text for the resume here
+John Doe
+Junior Software Engineer
+Toronto, ON | john.doe@example.com | github.com/example/john.doe
+
+SUMMARY
+Junior software engineer with a background in computer science and hands-on
+experience building backend applications, automation tools, and data-driven
+systems. Comfortable working with Python, Java, SQL, Linux, and Docker.
+Interested in backend development, infrastructure, and developer tooling.
+
+EDUCATION
+Bachelor of Science in Computer Science
+Example University, Toronto, ON
+2022 - 2026
+
+TECHNICAL SKILLS
+Languages: Python, Java, C++, SQL, Bash, JavaScript
+Backend: Flask, REST APIs, PostgreSQL, SQLite
+Infrastructure: Linux, Docker, Docker Compose, Git
+Testing: Pytest, Unit Testing
+Other: Multithreading, Data Structures & Algorithms, Networking
+
+PROJECTS
+JobMatch — Job Recommendation Platform
+- Built a Python application that collects and analyzes job postings.
+- Designed a SQLite database for persistent job storage and deduplication.
+- Integrated a local LLM to evaluate job postings against candidate profiles.
+- Built a terminal-based interface for reviewing and managing recommendations.
+
+System Monitor — Linux Monitoring Tool
+- Developed a Python service that monitors CPU, memory, disk, and network usage.
+- Added configurable thresholds and logging for abnormal system conditions.
+- Packaged the application with Docker for reproducible deployment.
+
+Web API — Backend Development Project
+- Developed a REST API using Flask and PostgreSQL.
+- Implemented CRUD operations, input validation, and error handling.
+- Added automated unit tests using Pytest.
+
+EXPERIENCE
+Software Developer Intern
+Example Technologies, Toronto, ON
+May 2025 - Aug 2025
+- Developed Python utilities to automate internal data-processing workflows.
+- Wrote SQL queries for reporting and data validation.
+- Fixed bugs and implemented small features in an existing Java application.
+- Used Git for version control and participated in code reviews.
+
+IT Support Assistant
+Example University, Toronto, ON
+Sep 2023 - Apr 2025
+- Troubleshot Linux and Windows systems for students and staff.
+- Assisted with network and account-related issues.
+- Created small Bash and Python scripts to automate repetitive tasks.
+
+INTERESTS
+Backend engineering, Linux systems, automation, infrastructure, distributed
+systems, and developer tooling.
 """

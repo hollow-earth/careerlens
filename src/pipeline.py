@@ -1,13 +1,13 @@
-from collections.abc import Callable
 import sqlite3
 import time
+from collections.abc import Callable
 from datetime import datetime, timezone
+from pathlib import Path
+from shutil import copyfile
 from typing import Any
 
-from tomllib import load
-from pathlib import Path
-
 from rich.text import Text
+from tomllib import load
 
 import database
 import llm
@@ -27,6 +27,17 @@ def load_config(path: str | Path = "config.toml") -> dict[str, Any]:
     -----
     dict[str, Any]: the TOML configuration as a dictionary.
     """
+
+    # TODO: add a popup that says that config.example.toml was copied to make config.toml
+    path = Path(path)
+    if not path.exists():
+        example_path = path.with_name("config.example.toml")
+
+        if not example_path.exists():
+            raise FileNotFoundError(f"Neither {path} nor {example_path} exists.")
+    
+        _ = copyfile(example_path, path)
+        print(f"Created {path} from {example_path}")
     
     with open(path, "rb") as f:
         return load(f)
