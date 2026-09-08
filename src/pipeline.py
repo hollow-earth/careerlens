@@ -83,7 +83,7 @@ def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], job: 
             database.write_job_to_jobs(conn, job_to_write)
         else:
             job_to_write.status = JobStatus.DISCARDED
-            job_to_write.discard_reason = f"Score {job_to_write.score} below the minimum threshold of {min_score}"
+            job_to_write.discard_reason = f"Score below the minimum threshold of {min_score}"
             database.write_job_to_discarded(conn, job_to_write)
         database.delete_from_staging(conn, job_to_write)
 
