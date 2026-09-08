@@ -3,6 +3,21 @@ A privacy-focused, local-first, AI-powered job search and recommendation engine 
 
 The goal is simple: spend less time looking for jobs and more time applying to the right ones.
 
+<img width="1660" height="1270" alt="image" src="https://github.com/user-attachments/assets/c4aff75a-dc1d-4758-a874-8ae8d78e4495" />
+<img width="1660" height="1270" alt="image" src="https://github.com/user-attachments/assets/6f4d5f02-f328-4572-855b-c89747f978da" />
+
+## How to Run
+```bash
+git clone https://github.com/hollow-earth/careerlens.git
+cd careerlens
+
+python -m venv .venv
+source .venv/bin/activate
+
+python -m pip install -r requirements.txt
+python main.py
+```
+
 ## What it does
 CareerLens automates much of the tedious work involved in a modern job search:
 - Scrapes job postings from supported job boards
