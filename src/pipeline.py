@@ -99,16 +99,18 @@ def drain_staging(conn: sqlite3.Connection, config: dict[str, Any], progress_cal
     config: reference to a config TOML dict[str, Any].
     """
     progress_callback(Text("Draining staging table and processing with LLM...", style = "#f52bfb"))
+    offset = 0
     while True:
         start_time = time.perf_counter()
 
         try:
-            job = database.get_next_staging(conn)
+            job = database.get_next_staging(conn, offset)
             if job is None:
                 break
             process_job_with_llm(conn, config, job, progress_callback)    
         except llm.LLMProcessingError as error:
             progress_callback(Text(str(error)))
+            offset += 1
 
         end_time = time.perf_counter()
         execution_time = end_time - start_time

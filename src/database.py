@@ -308,14 +308,14 @@ def get_next_ingest(conn: sqlite3.Connection, source: JobSource) -> JobEntry | N
     )
 
 
-def get_next_staging(conn: sqlite3.Connection) -> JobEntry | None:
+def get_next_staging(conn: sqlite3.Connection, offset: int = 0) -> JobEntry | None:
     row = conn.execute("""
         SELECT * FROM staging
         WHERE status = ?
         ORDER BY id
-        LIMIT 1
+        LIMIT 1 OFFSET ?
         """,
-        (JobStatus.READY.value, )
+        (JobStatus.READY.value, offset)
     ).fetchone()
 
     return None if row is None else JobEntry(
