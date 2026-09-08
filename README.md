@@ -65,7 +65,7 @@ Instead of giving you hundreds of job postings to sift through, CareerLens aims 
 "Which of these jobs should I actually apply to?"
 
 ## AI-Powered Recommendations
-Each job receives a numerical score based on its overall fit with the candidate.
+Each job receives a numerical score based on its overall fit with the candidate. The default values are:
 
 | Score      | Recommendation                 | Meaning                                                                 |
 | ---------- | ------------------------------ | ----------------------------------------------------------------------- |
@@ -89,7 +89,7 @@ Job sources are handled by dedicated ingestion modules which convert externally 
 
 This separation was intentional: scraping, data processing, persistence, LLM evaluation, and presentation are treated as separate concerns.
 
-## Design
+### Design
 CareerLens started as a personal automation project, but I wanted it to be more than a collection of scripts. The application therefore makes use of several software engineering concepts, including:
 
 - Object-oriented design and inheritance for representing jobs and extending application components
@@ -102,6 +102,15 @@ CareerLens started as a personal automation project, but I wanted it to be more 
 - Textual for the interactive terminal user interface (TUI)
 
 One of the main design goals was to keep the application local-first. Job data, resumes, configuration, and LLM evaluation can all remain on the user's machine rather than being sent to a third-party job recommendation service.
+
+### Database Design
+CareerLens uses several SQLite tables to separate jobs at different stages of the processing pipeline:
+
+- Companies: Maintains a record of companies encountered by CareerLens. This allows the application to track companies across job postings and apply company-level filtering.
+- Ingest: The initial table for job sources where job identifiers and URLs must be collected separately from retrieving the full job posting.
+- Staging: Contains jobs with the minimum information necessary for LLM evaluation. Keeping only the required data at this stage reduces unnecessary processing and context sent to the LLM.
+- Jobs: Contains job postings that have passed the filtering and evaluation stages and that the candidate should consider applying to. This is the final destination for successfully processed jobs.
+- Discarded: Contains jobs rejected during processing, whether through keyword filtering, company filtering, manual user dismissal, or LLM evaluation. Keeping discarded jobs allows CareerLens to avoid repeatedly processing the same postings.
 
 ## Current Limitations
 
@@ -117,6 +126,7 @@ Some current limitations include:
 - Scraping currently runs to completion once started; proper cancellation and interruption handling are planned. The current workaround is to close the UI with Ctrl+Q and terminate the underlying process with Ctrl+C
 - Some internal components are functional but would benefit from further refactoring.
 - Website changes made by supported job sources may break scraper functionality.
+- Company blacklist can only be set directly through the database.
 
 These limitations are known and are part of the current prototype.
 
@@ -129,6 +139,7 @@ Some ideas currently on the roadmap:
 - Better scraping interruption and cancellation support
 - More flexible job-source configuration
 - Additional filtering and recommendation options
+- Access to the discarded table along with infinite scrolling
 - Improved resource management for local LLMs
 - The project is intentionally being released as a working prototype rather than waiting for every planned feature to be completed.
 
