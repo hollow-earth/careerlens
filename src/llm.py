@@ -9,6 +9,9 @@ from scrapers.scraper_utilities import JobEntry, JobStatus
 
 ProgressCallback = Callable[[Text], None]
 
+class LLMProcessingError(Exception):
+    pass
+
 def generate_response(config: dict[str, Any], prompt: str, progress_callback: ProgressCallback) -> str:
     try:
         response = ollama.generate(
@@ -289,9 +292,9 @@ def use_llm(config: dict[str, Any], job: JobEntry, progress_callback: ProgressCa
             score, reasoning = parse_llm_response(config, response_candidate)
             break
         except:
-            print(f"LLM attempt {attempt + 1}/{MAX_RETRIES} failed")
+            progress_callback(Text(f"LLM attempt {attempt + 1}/{MAX_RETRIES} failed, retrying..."))
     else:
-        raise Exception("LLM failed after 3 attempts")
+        raise LLMProcessingError(f"LLM failed after {MAX_RETRIES} attempts")
 
     if score >= config["llm"]["apply_immediately_threshold"]:
         short_score =  "🟢 Apply immediately"

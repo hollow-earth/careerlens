@@ -73,17 +73,17 @@ def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], job: 
     # TODO: maybe this should be split into two functions?
     min_score = int(config["llm"]["minimum_score"])
     progress_callback(Text(f"Processing job: {job.title}, at {job.company}"))
-    
+
     job_to_write = llm.use_llm(config, job, progress_callback)
     job_to_write.updated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    
+
     with conn:
         if job_to_write.score is not None and job_to_write.score >= min_score:
             job_to_write.status = JobStatus.PENDING_MANUAL_REVIEW
             database.write_job_to_jobs(conn, job_to_write)
         else:
             job_to_write.status = JobStatus.DISCARDED
-            job_to_write.discard_reason = f"Score {job_to_write.score} below the minimum threshold of {min_score}"
+            job_to_write.discard_reason = f"Score below the minimum threshold of {min_score}"
             database.write_job_to_discarded(conn, job_to_write)
         database.delete_from_staging(conn, job_to_write)
 
@@ -99,14 +99,19 @@ def drain_staging(conn: sqlite3.Connection, config: dict[str, Any], progress_cal
     config: reference to a config TOML dict[str, Any].
     """
     progress_callback(Text("Draining staging table and processing with LLM...", style = "#f52bfb"))
+    offset = 0
     while True:
         start_time = time.perf_counter()
 
-        job = database.get_next_staging(conn)
-        if job is None:
-            break
-        process_job_with_llm(conn, config, job, progress_callback)
-        
+        try:
+            job = database.get_next_staging(conn, offset)
+            if job is None:
+                break
+            process_job_with_llm(conn, config, job, progress_callback)    
+        except llm.LLMProcessingError as error:
+            progress_callback(Text(str(error)))
+            offset += 1
+
         end_time = time.perf_counter()
         execution_time = end_time - start_time
         progress_callback(Text(f"Processing took {execution_time:.6f}s.\n"))

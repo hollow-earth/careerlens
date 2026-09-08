@@ -145,7 +145,7 @@ class ProcessingMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
         yield Footer()
         with Vertical(id="menu"), Vertical(id="buttons"):
             yield Button("Scrape LinkedIn", id="scrape-linkedin")
-            yield Button("Drain Staging", id="drain-staging")
+            yield Button("Process with LLM", id="drain-staging")
             yield Button("Return", id="return")
 
     def action_scrape_linkedin(self) -> None:
@@ -185,6 +185,7 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
         super().__init__()
         self.jobs = []
         self.conn = connect()
+        init_tables(self.conn)
         self.table: DataTable[object]
 
     def compose(self) -> ComposeResult:
@@ -238,7 +239,7 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
 
     def action_expand_job_view(self) -> None:
         row = self.query_one(DataTable).cursor_row
-        if row < 0:
+        if row < 0 or row >= len(self.jobs):
             return
         job = self.jobs[row]    
         _ = self.app.push_screen(ExpandedJobView(job, self.conn), self.update_table)
@@ -320,7 +321,7 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
         yield Header(show_clock = True)
         yield RichLog(id = "log")
         yield Footer()
-        yield Button("Test", id="sneed")
+        #yield Button("Test", id="sneed")
 
     def dismiss_scrape_linkedin_screen(self) -> None:
         _ = self.dismiss()
@@ -373,7 +374,7 @@ class DrainStaging(Screen): # pyright: ignore[reportMissingTypeArgument]
         yield Header(show_clock = True)
         yield RichLog(id = "log")
         yield Footer()
-        yield Button("Test", id="sneed")
+        #yield Button("Test", id="sneed")
 
     def on_mount(self) -> None:
         self.run_drain_staging()
