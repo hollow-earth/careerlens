@@ -125,12 +125,13 @@ class MainMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
 class ProcessingMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
     BINDINGS = [
         Binding("l", "scrape_linkedin", "Scrape LinkedIn"),
+        Binding("escape", "exit_view", "Cancel"),
     ]
     CSS_PATH = "css/ScrapeMenu.tcss"
 
     def __init__(self):
         super().__init__()
-    
+
     def compose(self) -> ComposeResult:
         yield Header(show_clock = True)
         yield Footer()
@@ -143,7 +144,7 @@ class ProcessingMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
 
     def action_scrape_linkedin(self) -> None:
         _ = self.app.push_screen(ScrapeWebsites([ScraperSources.LINKEDIN]))
-    
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "return":
             self.dismiss_scrape_screen()
