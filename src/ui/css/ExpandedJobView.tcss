@@ -1,0 +1,19 @@
+ExpandedJobView {
+    align: center middle;
+}
+
+VerticalScroll {
+    width: 85%;
+    height: 85%;
+    border: round $accent;
+    background: $surface;
+    padding: 1 2;
+}
+
+Markdown {
+    text-align: left;
+}
+
+MarkdownH1 {
+    text-align: left;
+}

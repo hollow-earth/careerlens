@@ -1,16 +1,19 @@
+from collections.abc import Callable
 import sqlite3
 import time
 from datetime import datetime, timezone
 from typing import Any
 
-from playwright.sync_api import sync_playwright
 from tomllib import load
 from pathlib import Path
 
+from rich.text import Text
+
 import database
 import llm
-from scrapers.linkedin import linkedin_scraper
 from scrapers.scraper_utilities import JobEntry, JobFilters, JobStatus
+
+ProgressCallback = Callable[[Text], None]
 
 def load_config(path: str | Path = "config.toml") -> dict[str, Any]:
     """
@@ -44,7 +47,7 @@ def load_filters(config: dict[str, Any]) -> JobFilters:
     # TODO: delete this in the future, replace with a table in sqlite
     return JobFilters(config)
 
-def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], job: JobEntry) -> None:
+def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], job: JobEntry, progress_callback: ProgressCallback) -> None:
     """
     Process a job with the LLM and write to the database.
 
@@ -58,9 +61,9 @@ def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], job: 
 
     # TODO: maybe this should be split into two functions?
     min_score = int(config["llm"]["minimum_score"])
-    print(f"Processing job: {job.title}, at {job.company}")
+    progress_callback(Text(f"Processing job: {job.title}, at {job.company}"))
     
-    job_to_write = llm.use_llm(config, job)
+    job_to_write = llm.use_llm(config, job, progress_callback)
     job_to_write.updated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     
     with conn:
@@ -74,7 +77,7 @@ def process_job_with_llm(conn: sqlite3.Connection, config: dict[str, Any], job: 
         database.delete_from_staging(conn, job_to_write)
 
 
-def drain_staging(conn: sqlite3.Connection, config: dict[str, Any]) -> None:
+def drain_staging(conn: sqlite3.Connection, config: dict[str, Any], progress_callback: ProgressCallback) -> None:
     """
     Drains jobs from staging and sends them to the LLM.
 
@@ -84,35 +87,15 @@ def drain_staging(conn: sqlite3.Connection, config: dict[str, Any]) -> None:
     conn: connection to the SQLite database.
     config: reference to a config TOML dict[str, Any].
     """
+    progress_callback(Text("Draining staging table and processing with LLM...", style = "#f52bfb"))
     while True:
         start_time = time.perf_counter()
-        
+
         job = database.get_next_staging(conn)
         if job is None:
             break
-        process_job_with_llm(conn, config, job)
+        process_job_with_llm(conn, config, job, progress_callback)
         
         end_time = time.perf_counter()
         execution_time = end_time - start_time
-        print(f"Processing took {execution_time:.6f}s.\n")
-
-
-def pipeline():
-    config = load_config()
-    filters = load_filters(config)
-    conn = database.connect()
-    try:
-        database.init_tables(conn)
-
-        with sync_playwright() as p:
-            browser = p.firefox.launch(headless=False) # TODO: switch to True when tests are over
-            linkedin_scraper(conn, browser, config, filters)
-       
-        # TODO: deduplicate_staging()
-        drain_staging(conn, config)
-            
-    finally:
-        try:
-            database.close(conn)
-        except sqlite3.Error as error:
-            print(f"Error: {error}")
+        progress_callback(Text(f"Processing took {execution_time:.6f}s.\n"))

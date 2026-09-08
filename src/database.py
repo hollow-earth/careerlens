@@ -1,7 +1,16 @@
 import sqlite3
+from collections.abc import Sequence
 from datetime import datetime, timezone
 
-from scrapers.scraper_utilities import CompanyEntry, CompanyTrustStatus, JobEntry, JobSource, JobStatus
+from typing_extensions import Any
+
+from scrapers.scraper_utilities import (
+    CompanyEntry,
+    CompanyTrustStatus,
+    JobEntry,
+    JobSource,
+    JobStatus,
+)
 
 INGEST_REQUIRED = ("source", "job_id", "url")
 STAGING_REQUIRED = INGEST_REQUIRED + ("title", "company", "location", "description")
@@ -365,3 +374,99 @@ def get_company(conn: sqlite3.Connection, company: str) -> None | CompanyEntry:
         name_input = row["normalized_name"],
         trust_status = CompanyTrustStatus(row["trust_status"])
     )
+
+def get_jobs_for_display(conn: sqlite3.Connection, limit: int = 100, offset: int = 0) -> list[JobEntry]:
+    rows = conn.execute("""
+        SELECT *
+        FROM jobs
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+        """,
+        (limit, offset),
+    ).fetchall()
+    return rows_to_jobentry(rows)
+
+def row_to_jobentry(row: sqlite3.Row) -> JobEntry:
+    keys = row.keys()
+    
+    return JobEntry(
+        source          = JobSource(row["source"]),
+        job_id          = row["job_id"],
+        url             = row["url"],
+        
+        title           = row["title"]              if "title" in keys else None,
+        company         = row["company"]            if "company" in keys else None,
+        location        = row["location"]           if "location" in keys else None,
+        description     = row["description"]        if "description" in keys else None,
+        status          = JobStatus(row["status"])  if "status" in keys else None,
+        resume_used     = row["resume_used"]        if "resume_used" in keys else None,
+        score           = row["score"]              if "score" in keys else None,
+        short_score     = row["short_score"]        if "short_score" in keys else None,
+        reasoning       = row["reasoning"]          if "reasoning" in keys else None,
+        created_at      = row["created_at"]         if "created_at" in keys else None,
+        updated_at      = row["updated_at"]         if "updated_at" in keys else None,
+        applied_at      = row["applied_at"]         if "applied_at" in keys else None,
+        discarded_at    = row["discarded_at"]       if "discarded_at" in keys else None,
+        discard_reason  = row["discard_reason"]     if "discard_reason" in keys else None,
+    )
+
+def rows_to_jobentry(rows: Sequence[sqlite3.Row]) -> list[JobEntry]:
+    return [row_to_jobentry(row) for row in rows]
+
+def mark_job_applied(conn: sqlite3.Connection, job: JobEntry) -> None:
+    _ = conn.execute("""
+        UPDATE jobs
+        SET status = ?,
+            resume_used = ?,
+            applied_at = ?
+        WHERE source = ?
+          AND job_id = ?
+        """,
+        (
+            JobStatus.APPLIED.value,
+            job.resume_used,
+            datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            job.source.value,
+            job.job_id,
+        ),
+    )
+
+    conn.commit()
+
+def mark_job_discarded(conn: sqlite3.Connection, job: JobEntry) -> None:
+    with conn:
+        _ = conn.execute("""
+            DELETE FROM jobs 
+            WHERE (source = ? AND job_id = ?) OR url = ?
+            """,
+            (job.source.value, job.job_id, job.url,)
+        )
+        
+        _ = conn.execute("""
+                INSERT OR IGNORE INTO discarded 
+                (
+                title, company, location, description, source, job_id, url,
+                status, created_at, updated_at, applied_at, resume_used, 
+                score, short_score, reasoning, discard_reason, discarded_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                job.title,
+                job.company,
+                job.location,
+                job.description,
+                job.source.value,
+                job.job_id,
+                job.url,
+                JobStatus.DISCARDED.value,
+                job.created_at,
+                job.updated_at,
+                job.applied_at,
+                job.resume_used,
+                job.score,
+                job.short_score,
+                job.reasoning,
+                job.discard_reason,
+                datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            )
+        )

@@ -1,0 +1,15 @@
+DiscardPrompt {
+    align: center middle;
+}
+
+#discard-prompt {
+    width: 70%;
+    height: auto;
+    padding: 2;
+    border: round $accent;
+    background: $surface;
+}
+
+#disacrd-prompt Input {
+    margin: 1 0;
+}

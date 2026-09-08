@@ -1,0 +1,7 @@
+Button:focus {
+    text-style: none;
+}
+
+#scrape-linkedin {
+    background: #0a66c2;
+}

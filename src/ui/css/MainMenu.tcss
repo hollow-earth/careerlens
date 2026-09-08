@@ -1,0 +1,29 @@
+Button:focus {
+    text-style: none;
+}
+
+#menu {
+    width: 100%;
+    height: 1fr;
+    layers: buttons title;
+}
+
+#buttons {
+    layer: buttons;
+    width: 100%;
+    height: 100%;
+    align: center middle;
+}
+
+#title {
+    layer: title;
+    width: 100%;
+    height: auto;
+    text-align: center;
+    offset: 0 8;
+}
+
+#buttons Button {
+    width: 30;
+    margin: 1;
+}
