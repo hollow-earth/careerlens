@@ -1,13 +1,15 @@
 from datetime import datetime
 from enum import Enum, auto
 from pathlib import Path
+from typing import cast
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 from rich.text import Text
 from textual import events, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Horizontal, HorizontalGroup, Vertical, VerticalScroll
+from textual.containers import Container, Vertical, VerticalScroll
 from textual.coordinate import Coordinate
 from textual.screen import ModalScreen, Screen
 from textual.widgets import (
@@ -21,7 +23,6 @@ from textual.widgets import (
     RichLog,
     Static,
 )
-from typing import Any, cast
 
 from database import (
     close,
@@ -31,7 +32,7 @@ from database import (
     mark_job_applied,
     mark_job_discarded,
 )
-from pipeline import load_config, load_filters, drain_staging
+from pipeline import drain_staging, load_config, load_filters
 from scrapers.linkedin import linkedin_scraper
 from scrapers.scraper_utilities import JobEntry, JobFilters, JobStatus
 
@@ -352,7 +353,10 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
                 browser = p.firefox.launch(headless = True)
                 for source in self.scraper_sources:
                     s = SCRAPERS[source]
-                    s(conn, app.config, app.filters, browser, progress_callback)
+                    try:
+                        s(conn, app.config, app.filters, browser, progress_callback)
+                    except PlaywrightError as error:
+                        self.write_log(Text(f"Scraper {source.value} failed: {error}", ))
 
         finally:
             close(conn)
