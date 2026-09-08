@@ -92,7 +92,7 @@ class MainMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
         Binding("p", "expand_process_screen", "Process jobs"),
         Binding("b", "expand_jobs_screen", "Browse jobs"),
     ]
-    CSS_PATH = "css/MainMenu.css"
+    CSS_PATH = "css/MainMenu.tcss"
     
     def __init__(self) -> None:
         super().__init__()
@@ -126,7 +126,7 @@ class ProcessingMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
     BINDINGS = [
         Binding("l", "scrape_linkedin", "Scrape LinkedIn"),
     ]
-    CSS_PATH = "css/ScrapeMenu.css"
+    CSS_PATH = "css/ScrapeMenu.tcss"
 
     def __init__(self):
         super().__init__()
