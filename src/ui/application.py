@@ -2,12 +2,12 @@ from enum import Enum, auto
 
 from playwright.sync_api import sync_playwright
 from rich.text import Text
-from textual import work, events
+from textual import events, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, HorizontalGroup, Vertical, VerticalScroll
 from textual.coordinate import Coordinate
-from textual.screen import ModalScreen
+from textual.screen import ModalScreen, Screen
 from textual.widgets import (
     Button,
     DataTable,
@@ -103,7 +103,7 @@ class MainApp(App): # pyright: ignore[reportMissingTypeArgument]
 # ===================== #
 """
 
-class ScrapeMenu(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
+class ScrapeMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
     CSS_PATH = "css/ScrapeMenu.css"
 
     def __init__(self):
@@ -131,12 +131,12 @@ class ScrapeMenu(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
 # ===================== #
 """
 
-class ScrapeWebsites(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
+class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
     #CSS_PATH = "css/ScrapeLinkedin.css"
     def __init__(self, scraper_sources: list[ScraperSources]) -> None:
         super().__init__()
         self.scraper_sources: list[ScraperSources] = scraper_sources
-        self.scrape_complete = False
+        self.scrape_complete: bool = False
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock = True)
@@ -161,6 +161,7 @@ class ScrapeWebsites(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
     
     @work(thread=True)
     def run_scraper(self) -> None:
+        # TODO: implement a way to quit halfway through with a button, ^q, and ^c
         app = cast(MainApp, self.app)   # basedpyright workaround
 
         def progress_callback(message: Text) -> None:
