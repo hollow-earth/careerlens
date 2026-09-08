@@ -185,6 +185,7 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
         super().__init__()
         self.jobs = []
         self.conn = connect()
+        init_tables(self.conn)
         self.table: DataTable[object]
 
     def compose(self) -> ComposeResult:
