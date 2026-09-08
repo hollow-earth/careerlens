@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum, auto
 from pathlib import Path
 
@@ -170,7 +171,8 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
         ("Company", "company", 30),
         ("Description", "description", 30),
         ("Score", "score", 10),
-        ("Status", "status", 20),
+        ("Status", "status", 25),
+        ("Date created", "date_created", 25)
     )
     
     BINDINGS = [
@@ -201,6 +203,9 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
                 "" if job.description is None else job.description,
                 "" if job.score is None else str(job.score),
                 "" if job.status is None else job.status.value,
+                "" if job.created_at is None else \
+                    datetime.fromisoformat(job.created_at).astimezone().strftime('%Y-%m-%d %H:%M:%S %Z') if isinstance(job.created_at, str)\
+                    else "AHELP",
             ) 
             for job in self.jobs
         )
