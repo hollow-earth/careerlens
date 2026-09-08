@@ -89,7 +89,7 @@ class MainApp(App): # pyright: ignore[reportMissingTypeArgument]
 
 class MainMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
     BINDINGS = [
-        Binding("s", "expand_process_screen", "Scrape jobs"),
+        Binding("p", "expand_process_screen", "Process jobs"),
         Binding("b", "expand_jobs_screen", "Browse jobs"),
     ]
     CSS_PATH = "css/MainMenu.css"
@@ -123,6 +123,9 @@ class MainMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
 """
 
 class ProcessingMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
+    BINDINGS = [
+        Binding("l", "scrape_linkedin", "Scrape LinkedIn"),
+    ]
     CSS_PATH = "css/ScrapeMenu.css"
 
     def __init__(self):
@@ -138,6 +141,9 @@ class ProcessingMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
     def dismiss_scrape_screen(self) -> None:
         _ = self.dismiss()
 
+    def action_scrape_linkedin(self) -> None:
+        _ = self.app.push_screen(ScrapeWebsites([ScraperSources.LINKEDIN]))
+    
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "return":
             self.dismiss_scrape_screen()
