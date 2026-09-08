@@ -7,7 +7,7 @@ from time import sleep
 
 from playwright.sync_api import Browser
 from rich.text import Text
-from typing_extensions import Any
+from typing import Any
 
 import database
 from scrapers import scraper_utilities

@@ -1,0 +1,16 @@
+playwright
+rich
+textual
+ollama
+re
+unicodedata
+dataclasses
+datetime
+enum
+collections.abc
+random
+sqlite3
+time
+json
+pathlib
+tomllib

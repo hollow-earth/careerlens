@@ -4,7 +4,7 @@ from dataclasses import InitVar, dataclass
 from datetime import datetime
 from enum import Enum
 
-from typing_extensions import Any
+from typing import Any
 
 
 def normalize(text: str) -> str:

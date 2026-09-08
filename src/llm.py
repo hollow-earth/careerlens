@@ -3,7 +3,7 @@ import json
 
 import ollama
 from rich.text import Text
-from typing_extensions import Any
+from typing import Any
 
 from scrapers.scraper_utilities import JobEntry, JobStatus
 

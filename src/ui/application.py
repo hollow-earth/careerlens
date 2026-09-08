@@ -20,7 +20,7 @@ from textual.widgets import (
     RichLog,
     Static,
 )
-from typing_extensions import Any, cast
+from typing import Any, cast
 
 from database import (
     close,

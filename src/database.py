@@ -2,8 +2,6 @@ import sqlite3
 from collections.abc import Sequence
 from datetime import datetime, timezone
 
-from typing_extensions import Any
-
 from scrapers.scraper_utilities import (
     CompanyEntry,
     CompanyTrustStatus,
