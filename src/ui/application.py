@@ -321,7 +321,7 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
         yield Header(show_clock = True)
         yield RichLog(id = "log")
         yield Footer()
-        yield Button("Test", id="sneed")
+        #yield Button("Test", id="sneed")
 
     def dismiss_scrape_linkedin_screen(self) -> None:
         _ = self.dismiss()
@@ -374,7 +374,7 @@ class DrainStaging(Screen): # pyright: ignore[reportMissingTypeArgument]
         yield Header(show_clock = True)
         yield RichLog(id = "log")
         yield Footer()
-        yield Button("Test", id="sneed")
+        #yield Button("Test", id="sneed")
 
     def on_mount(self) -> None:
         self.run_drain_staging()
