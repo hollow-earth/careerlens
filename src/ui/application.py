@@ -145,7 +145,7 @@ class ProcessingMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
         yield Footer()
         with Vertical(id="menu"), Vertical(id="buttons"):
             yield Button("Scrape LinkedIn", id="scrape-linkedin")
-            yield Button("Drain Staging", id="drain-staging")
+            yield Button("Process with LLM", id="drain-staging")
             yield Button("Return", id="return")
 
     def action_scrape_linkedin(self) -> None:
