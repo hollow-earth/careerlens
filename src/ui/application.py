@@ -6,7 +6,7 @@ from rich.text import Text
 from textual import events, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, HorizontalGroup, Vertical, VerticalScroll
+from textual.containers import Container, Horizontal, HorizontalGroup, Vertical, VerticalScroll
 from textual.coordinate import Coordinate
 from textual.screen import ModalScreen, Screen
 from textual.widgets import (
@@ -18,6 +18,7 @@ from textual.widgets import (
     Label,
     Markdown,
     RichLog,
+    Static,
 )
 from typing_extensions import Any, cast
 
@@ -80,6 +81,11 @@ class MainApp(App): # pyright: ignore[reportMissingTypeArgument]
 #        Layer 1
 # ===================== #
 """
+ASCII_TITLE = """   ___                          __                
+ / __\\__ _ _ __ ___  ___ _ __ / /  ___ _ __  ___ 
+/ /  / _` | '__/ _ \\/ _ \\ '__/ /  / _ \\ '_ \\/ __|
+/ /__| (_| | | |  __/  __/ | / /__|  __/ | | \\__ \\
+\\____/\\__,_|_|  \\___|\\___|_| \\____/\\___|_| |_|___/"""
 
 class MainMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
     BINDINGS = [
@@ -93,10 +99,15 @@ class MainMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
     
     def compose(self) -> ComposeResult:
         yield Header(show_clock = True)
+        
+        with Container(id="menu"):
+            yield Static(ASCII_TITLE, id = "title")
+            
+            with Vertical(id="buttons"):
+                yield Button("Process Jobs", id="process-jobs")
+                yield Button("Browse Jobs", id="browse-jobs")
+
         yield Footer()
-        with Vertical(id="menu"), Vertical(id="buttons"):
-            yield Button("Process Jobs", id="process-jobs")
-            yield Button("Browse Jobs", id="browse-jobs")
 
     def action_expand_process_screen(self) -> None:
         _ = self.app.push_screen(ProcessingMenu())

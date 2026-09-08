@@ -3,13 +3,24 @@ Button:focus {
 }
 
 #menu {
-    align: center middle;
+    width: 100%;
+    height: 1fr;
+    layers: buttons title;
 }
 
 #buttons {
-    width: auto;
-    height: auto;
+    layer: buttons;
+    width: 100%;
+    height: 100%;
     align: center middle;
+}
+
+#title {
+    layer: title;
+    width: 100%;
+    height: auto;
+    text-align: center;
+    offset: 0 8;
 }
 
 #buttons Button {
