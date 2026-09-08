@@ -1,6 +1,7 @@
 import sqlite3
 from collections.abc import Sequence
 from datetime import datetime, timezone
+from pathlib import Path
 
 from scrapers.scraper_utilities import (
     CompanyEntry,
@@ -23,11 +24,14 @@ def connect() -> sqlite3.Connection:
     ------
     sqlite3.Connection: An open database connection.
     """
+
+    db_path = Path("./data/data.db")
+    db_path.parent.mkdir(parents=True, exist_ok=True)
     
     try:
         conn = sqlite3.connect("./data/data.db")
     except sqlite3.Error as error:
-        raise Exception(f"Error: {error}")
+        raise RuntimeError(f"Could not connect to database: {error}") from error
     else:
         conn.row_factory = sqlite3.Row
         return conn
