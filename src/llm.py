@@ -289,7 +289,7 @@ def use_llm(config: dict[str, Any], job: JobEntry, progress_callback: ProgressCa
             score, reasoning = parse_llm_response(config, response_candidate)
             break
         except:
-            print(f"LLM attempt {attempt + 1}/{MAX_RETRIES} failed")
+            progress_callback(Text(f"LLM attempt {attempt + 1}/{MAX_RETRIES} failed, retrying..."))
     else:
         raise Exception("LLM failed after 3 attempts")
 
