@@ -3,8 +3,14 @@ A privacy-focused, local-first, AI-powered job search and recommendation engine 
 
 The goal is simple: spend less time looking for jobs and more time applying to the right ones.
 
-<img width="1660" height="1270" alt="image" src="https://github.com/user-attachments/assets/c4aff75a-dc1d-4758-a874-8ae8d78e4495" />
-<img width="1660" height="1270" alt="image" src="https://github.com/user-attachments/assets/6f4d5f02-f328-4572-855b-c89747f978da" />
+<p align="center">
+  <img width="48%" alt="260908_21h22m58s_screenshot" src="https://github.com/user-attachments/assets/12544bfc-34f7-4170-be8c-c21d61a0a742" />
+  <img width="48%" alt="260908_21h23m59s_screenshot" src="https://github.com/user-attachments/assets/df4033d4-1902-4445-8e41-d9b2afe1b7be" />
+</p>
+<p align="center">
+  <img width="48%" alt="260908_21h24m18s_screenshot" src="https://github.com/user-attachments/assets/ba4345bf-a3c2-460c-a7ea-b06d6894271c" />
+  <img width="48%" alt="260908_21h25m02s_screenshot" src="https://github.com/user-attachments/assets/2ae45286-4fb4-4890-a22b-8505e1994562" />
+</p>
 
 ## Project Status
 
