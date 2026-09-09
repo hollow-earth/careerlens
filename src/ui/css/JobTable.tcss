@@ -1,0 +1,33 @@
+$background: #0B1117;
+$surface: #182532;
+$surface-light: #223447;
+
+$text: #E6F1F8;
+
+$primary: #38BDF8;
+$primary-dark: #0284C7;
+$primary-light: #7DD3FC;
+
+DataTable {
+    background: $background;
+    color: $text;
+    border: round $surface-light;
+    margin: 1 2;
+}
+
+DataTable > .datatable--header {
+    background: $surface;
+    color: $primary-light;
+    text-style: bold;
+}
+
+DataTable > .datatable--cursor {
+    background: $primary-dark;
+    color: $text;
+    text-style: bold;
+}
+
+DataTable:focus > .datatable--cursor {
+    background: $primary;
+    color: $background;
+}

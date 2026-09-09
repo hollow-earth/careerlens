@@ -1,5 +1,41 @@
-Button:focus {
-    text-style: none;
+$background: #0B1117;
+$surface: #182532;
+$surface-light: #223447;
+
+$text: #E6F1F8;
+$text-muted: #9FB3C8;
+
+$primary: #38BDF8;
+$primary-dark: #0284C7;
+$primary-light: #7DD3FC;
+
+Screen {
+    background: $background;
+    color: $text;
+}
+
+#buttons Button {
+    width: 60;
+    height: 10;
+    margin: 1;
+
+    background: $surface;
+    color: $primary-light;
+    border: round $primary-dark;
+
+    content-align: center middle;
+    text-style: bold;
+}
+
+#buttons Button:hover {
+    background: $primary-dark;
+    color: $text;
+}
+
+#buttons Button:focus {
+    background: $primary;
+    color: $background;
+    text-style: bold;
 }
 
 #menu {
@@ -23,7 +59,3 @@ Button:focus {
     offset: 0 8;
 }
 
-#buttons Button {
-    width: 30;
-    margin: 1;
-}

@@ -1,7 +1,23 @@
-Button:focus {
-    text-style: none;
+$background: #0B1117;
+$surface: #182532;
+$surface-light: #223447;
+
+$text: #E6F1F8;
+$text-muted: #9FB3C8;
+
+$primary: #38BDF8;
+$primary-dark: #0284C7;
+$primary-light: #7DD3FC;
+
+Screen {
+    background: $background;
+    color: $text;
 }
 
-#scrape-linkedin {
-    background: #0a66c2;
+#log {
+    width: 100%;
+    background: $background;
+    border: round $primary-dark;
+    padding: 2;
 }
+

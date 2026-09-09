@@ -1,12 +1,16 @@
+$surface: #182532;
+$primary-dark: #0284C7;
+
 ApplyPrompt {
     align: center middle;
+    background: transparent;
 }
 
 #apply-prompt {
     width: 70%;
     height: auto;
     padding: 2;
-    border: round $accent;
+    border: round $primary-dark;
     background: $surface;
 }
 

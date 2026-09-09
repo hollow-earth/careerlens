@@ -1,5 +1,18 @@
+$background: #0B1117;
+$surface: #182532;
+$primary-dark: #0284C7;
+
 ExpandedJobView {
     align: center middle;
+    background: transparent;
+}
+
+#job-view {
+    width: 85%;
+    height: 85%;
+    background: $surface;
+    border: round $primary-dark;
+    padding: 2;
 }
 
 VerticalScroll {

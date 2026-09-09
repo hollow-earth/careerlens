@@ -60,13 +60,15 @@ class MainApp(App): # pyright: ignore[reportMissingTypeArgument]
     TITLE = "CareerLens"
     ENABLE_COMMAND_PALETTE = False
     BINDINGS = [
-        Binding(".", "toggle_dark", "Toggle theme"),
+        #Binding(".", "toggle_dark", "Toggle theme"),
+        Binding("^q", "", "Quit")
     ]
 
     def __init__(self) -> None:
         super().__init__()
         self.config: dict[str, object] = load_config()
         self.filters: JobFilters = load_filters(self.config)
+        self.dark = True
 
     def on_mount(self) -> None:
         self.push_screen(MainMenu())
@@ -84,8 +86,8 @@ class MainApp(App): # pyright: ignore[reportMissingTypeArgument]
 # ===================== #
 """
 ASCII_TITLE = """   ___                          __                
- / __\\__ _ _ __ ___  ___ _ __ / /  ___ _ __  ___ 
-/ /  / _` | '__/ _ \\/ _ \\ '__/ /  / _ \\ '_ \\/ __|
+  / __\\__ _ _ __ ___  ___ _ __ / /  ___ _ __  ___ 
+ / /  / _` | '__/ _ \\/ _ \\ '__/ /  / _ \\ '_ \\/ __|
 / /__| (_| | | |  __/  __/ | / /__|  __/ | | \\__ \\
 \\____/\\__,_|_|  \\___|\\___|_| \\____/\\___|_| |_|___/"""
 
@@ -100,7 +102,7 @@ class MainMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
         super().__init__()
     
     def compose(self) -> ComposeResult:
-        yield Header(show_clock = True)
+        yield Header(show_clock = True, icon = None)
         
         with Container(id="menu"):
             yield Static(ASCII_TITLE, id = "title")
@@ -188,6 +190,8 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
         init_tables(self.conn)
         self.table: DataTable[object]
 
+    CSS_PATH = "css/JobTable.tcss"
+    
     def compose(self) -> ComposeResult:
         yield Header(show_clock = True)
         yield DataTable()
@@ -207,7 +211,7 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
                 "" if job.status is None else job.status.value,
                 "" if job.created_at is None else \
                     datetime.fromisoformat(job.created_at).astimezone().strftime('%Y-%m-%d %H:%M:%S %Z') if isinstance(job.created_at, str)\
-                    else "AHELP",
+                    else "",
             ) 
             for job in self.jobs
         )
@@ -278,9 +282,9 @@ class ExpandedJobView(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
             source      = self.job.source.value,
             job_id      = self.job.job_id,
             url         = self.job.url,
-            created_at  = f"Created at: {self.job.created_at}" if self.job.created_at else "",
-            updated_at  = f"Updated at: {self.job.updated_at}" if self.job.updated_at else "",
-            applied_at  = f"Applied at: {self.job.applied_at}" if self.job.applied_at else "",
+            created_at  = f"Created at: {datetime.fromisoformat(self.job.created_at).astimezone().strftime('%Y-%m-%d %H:%M:%S %Z')}" if isinstance(self.job.created_at, str) else "",
+            updated_at  = f"Updated at: {datetime.fromisoformat(self.job.updated_at).astimezone().strftime('%Y-%m-%d %H:%M:%S %Z')}" if isinstance(self.job.updated_at, str) else "",
+            applied_at  = f"Applied at: {datetime.fromisoformat(self.job.applied_at).astimezone().strftime('%Y-%m-%d %H:%M:%S %Z')}" if isinstance(self.job.applied_at, str) else "",
         )
         with VerticalScroll(id="job-view"):
             yield Markdown(md)
@@ -311,7 +315,7 @@ class ExpandedJobView(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
         self.dismiss()
 
 class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
-    #CSS_PATH = "css/ScrapeLinkedin.css"
+    CSS_PATH = "css/ScrapeMenu.tcss"
     def __init__(self, scraper_sources: list[ScraperSources]) -> None:
         super().__init__()
         self.scraper_sources: list[ScraperSources] = scraper_sources
@@ -365,7 +369,7 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
             self.write_log(Text("Press any key to continue...", style = "#f52bfb"))
 
 class DrainStaging(Screen): # pyright: ignore[reportMissingTypeArgument]
-    #CSS_PATH = "css/ScrapeLinkedin.css"
+    CSS_PATH = "css/ScrapeMenu.tcss"
     def __init__(self) -> None:
         super().__init__()
         self.drain_staging_complete: bool = False
