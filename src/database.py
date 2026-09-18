@@ -381,7 +381,7 @@ def get_jobs_for_display(conn: sqlite3.Connection, limit: int = 100, offset: int
     rows = conn.execute("""
         SELECT *
         FROM jobs
-        ORDER BY created_at DESC
+        ORDER BY date(created_at) DESC, score DESC
         LIMIT ? OFFSET ?
         """,
         (limit, offset),
