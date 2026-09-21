@@ -36,12 +36,14 @@ from database import (
     backup_database
 )
 from pipeline import drain_staging, load_config, load_filters
+from scrapers.indeed import indeed_scraper
 from scrapers.linkedin import linkedin_scraper
 from scrapers.scraper_utilities import JobEntry, JobFilters, JobStatus
 
 
 class ScraperSources(Enum):
     LINKEDIN = auto()
+    INDEED = auto()
 
 # TODO: remove this soon, redundant function but there's still old code that depends on it
 def truncate_text(value: str, width: int) -> Text:
@@ -51,6 +53,7 @@ def truncate_text(value: str, width: int) -> Text:
 
 SCRAPERS = {
     ScraperSources.LINKEDIN: linkedin_scraper,
+    ScraperSources.INDEED: indeed_scraper
 }
 
 """
@@ -159,6 +162,7 @@ class ProcessingMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
         yield Footer()
         with Vertical(id="menu"), Vertical(id="buttons"):
             yield Button("Scrape LinkedIn", id="scrape-linkedin")
+            yield Button("Scrape Indeed", id="scrape-indeed")
             yield Button("Process with LLM", id="drain-staging")
             yield Button("Return", id="return")
 
@@ -174,6 +178,8 @@ class ProcessingMenu(Screen): # pyright: ignore[reportMissingTypeArgument]
             _ = self.dismiss()
         if event.button.id == "scrape-linkedin":
             _ = self.app.push_screen(ScrapeWebsites([ScraperSources.LINKEDIN]))
+        if event.button.id == "scrape-indeed":
+            _ = self.app.push_screen(ScrapeWebsites([ScraperSources.INDEED]))
         if event.button.id == "drain-staging":
             _ = self.action_drain_staging()
 
