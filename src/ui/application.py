@@ -180,9 +180,9 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
     
     BINDINGS = [
         Binding("e", "expand_job_view", "Expand entry"),
-        Binding("escape", "exit_view", "Cancel"),
         Binding("w", "next_page", "Next page"),
         Binding("q", "previous_page", "Previous page"),
+        Binding("escape", "exit_view", "Cancel"),
     ]
     
     def __init__(self) -> None:
