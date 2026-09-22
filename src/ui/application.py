@@ -24,6 +24,7 @@ from textual.widgets import (
     Static,
 )
 
+import webbrowser
 from database import (
     close,
     connect,
@@ -292,6 +293,7 @@ class ExpandedJobView(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
         Binding("escape", "close_job_view", "Close entry"),
         Binding("a", "open_apply_view", "Apply"),
         Binding("d", "discard_entry", "Discard"),
+        Binding("o", "open_link", "Open Link"),
     ]
     CSS_PATH = "css/ExpandedJobView.tcss"
 
@@ -346,6 +348,9 @@ class ExpandedJobView(ModalScreen): # pyright: ignore[reportMissingTypeArgument]
 
     def action_close_job_view(self) -> None:
         self.dismiss()
+
+    def action_open_link(self) -> None:
+        webbrowser.open_new_tab(self.job.url)
 
 class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
     CSS_PATH = "css/ScrapeMenu.tcss"
