@@ -181,6 +181,8 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
     BINDINGS = [
         Binding("e", "expand_job_view", "Expand entry"),
         Binding("escape", "exit_view", "Cancel"),
+        Binding("q", "next_page", "Next page"),
+        Binding("w", "previous_page", "Previous page"),
     ]
     
     def __init__(self) -> None:
@@ -189,6 +191,8 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
         self.conn = connect()
         init_tables(self.conn)
         self.table: DataTable[object]
+        self.PAGE_SIZE = 100
+        self.page = 0
 
     CSS_PATH = "css/JobTable.tcss"
     
@@ -202,6 +206,15 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
         self.jobs = get_jobs_for_display(self.conn)
         for header, key, width in self.COLUMNS:
             _ = self.table.add_column(header, key=key, width=width)
+        self.load_page()
+
+    def load_page(self) -> bool:
+        jobs = get_jobs_for_display(self.conn, self.PAGE_SIZE, self.page * self.PAGE_SIZE)
+        if not jobs:
+            return False
+
+        self.jobs = jobs
+        self.table.clear()
         _ = self.table.add_rows(
             (
                 "" if job.title is None else job.title,
@@ -209,13 +222,28 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
                 "" if job.description is None else job.description,
                 "" if job.score is None else str(job.score),
                 "" if job.status is None else job.status.value,
-                "" if job.created_at is None else \
-                    datetime.fromisoformat(job.created_at).astimezone().strftime('%Y-%m-%d %H:%M:%S %Z') if isinstance(job.created_at, str)\
-                    else "",
-            ) 
-            for job in self.jobs
+                (
+                    datetime.fromisoformat(job.created_at)
+                    .astimezone()
+                    .strftime("%Y-%m-%d %H:%M:%S %Z")
+                    if isinstance(job.created_at, str)
+                    else ""
+                ),
+            )
+            for job in jobs
         )
-        # TODO: add infinite scroll, it only loads the first 100 for now
+        return True
+
+    def action_next_page(self) -> None:
+        self.page += 1
+        if not self.load_page():
+            self.page -= 1
+
+    def action_previous_page(self) -> None:
+        if self.page == 0:
+            return
+        self.page -= 1
+        self.load_page()
 
     def action_exit_view(self) -> None:
         _ = self.dismiss()
@@ -229,10 +257,15 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
 
         # Consider replacing with row = self.jobs.index(job) which is O(n) or using a key for each row
         row = self.table.cursor_row
+        if row < 0 or row >= len(self.jobs):
+            return
         if job.job_id != self.jobs[row].job_id or job.url != self.jobs[row].url:
-            row = self.jobs.index(job)
+            try:
+                row = self.jobs.index(job)
+            except ValueError:
+                return
 
-        if row < 0 or job.status is None:
+        if job.status is None:
             return
         elif job.status.value == JobStatus.DISCARDED.value:
             row_key = self.table.coordinate_to_cell_key(Coordinate(row, 0)).row_key
