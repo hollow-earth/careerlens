@@ -22,9 +22,11 @@ from scrapers.scraper_utilities import (
 
 PAGE_DELAY = uniform(3.0, 5.0)
 MAX_RETRIES = 3
+
 ProgressCallback = Callable[[Text], None]
 
 def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, Any], progress_callback: ProgressCallback) -> None:
+    current_retries = 0
     # TODO: put that in scraper_utilities
     keywords = " OR ".join(f'"{item}"' for item in config["search"]["keywords"])
     location = config["linkedin"]["location"]
@@ -70,6 +72,9 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
             scraped_url = current_job.locator(".base-card__full-link").get_attribute("href")
         except:
             progress_callback(Text(f"Scraping attempt failed"))
+            current_retries += 1
+            if current_retries >= 3:
+                break
             continue
         # TODO: assert has to be reaplced in the future with proper exceptions
         assert scraped_url is not None, (
