@@ -1,5 +1,4 @@
 [search]
-location = "Toronto, Ontario, Canada"
 keywords = [
     "DevOps",
     "SRE",
@@ -13,6 +12,13 @@ blacklisted_terms = [
 [linkedin]
 time_filter = 86400
 distance = 0
+location = "Toronto, Ontario, Canada"
+
+[indeed]
+time_filter = 3 # in days 
+distance = 0
+location = "Toronto, ON"
+country_code = "ca"
 
 [llm]
 model = "qwen3.5:4b"

@@ -27,7 +27,7 @@ ProgressCallback = Callable[[Text], None]
 def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, Any], progress_callback: ProgressCallback) -> None:
     # TODO: put that in scraper_utilities
     keywords = " OR ".join(f'"{item}"' for item in config["search"]["keywords"])
-    location = config["search"]["location"]
+    location = config["linkedin"]["location"]
     time_filter = config["linkedin"]["time_filter"]
     distance = config["linkedin"]["distance"]
 
