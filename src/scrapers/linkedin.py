@@ -148,7 +148,8 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:Jo
             progress_callback(Text("\t Job discarded due to match in blacklisted_terms"))
 
         if job.discard_reason:
-            job.discarded_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            job.created_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            job.discarded_at = job.created_at
             job.status = JobStatus.DISCARDED
             with conn:
                 database.write_job_to_discarded(conn, job)
