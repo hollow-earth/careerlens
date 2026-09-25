@@ -194,7 +194,6 @@ class JobTable(Screen): # pyright: ignore[reportMissingTypeArgument]
         super().__init__()
         self.jobs = []
         self.conn = connect()
-        init_tables(self.conn)
         self.table: DataTable[object]
         self.PAGE_SIZE = 100
         self.page = 0
@@ -396,7 +395,6 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
         
         conn = connect()
         try:
-            init_tables(conn)
             # Offline sources
             for source in non_browser_sources:
                 scraper, _requires_browser = SCRAPERS[source]
