@@ -15,7 +15,7 @@ from scrapers.scraper_utilities import (
 INGEST_REQUIRED = ("source", "job_id", "url")
 STAGING_REQUIRED = INGEST_REQUIRED + ("title", "company", "location", "description")
 JOBS_REQUIRED = STAGING_REQUIRED + ("created_at", "score", "short_score", "reasoning")
-DISCARDED_REQUIRED = STAGING_REQUIRED + ("discard_reason", )
+DISCARDED_REQUIRED = INGEST_REQUIRED + ("discard_reason", )
 
 def connect() -> sqlite3.Connection:
     """
