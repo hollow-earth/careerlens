@@ -6,7 +6,7 @@ from sqlite3 import Connection
 from time import sleep
 from typing import Any
 
-from playwright.sync_api import Browser
+from playwright.sync_api import Page
 from rich.text import Text
 
 import database
@@ -24,7 +24,7 @@ MAX_RETRIES = 3
 
 ProgressCallback = Callable[[Text], None]
 
-def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, Any], progress_callback: ProgressCallback) -> None:
+def linkedin_scrape_urls(conn: Connection, page: Page, config: dict[str, Any], progress_callback: ProgressCallback) -> None:
     current_retries = 0
     # TODO: put that in scraper_utilities
     keywords = " OR ".join(f'"{item}"' for item in config["search"]["keywords"])
@@ -45,7 +45,6 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
     if search_url == "https://www.linkedin.com/jobs/search?":
         raise Exception("You need at least one search term for LinkedIn!")
 
-    page = browser.new_page()
     _ = page.goto(search_url, wait_until="domcontentloaded")
 
     # Close the annoying pop ups
@@ -110,8 +109,7 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
     page.close()
 
 
-def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:JobFilters, progress_callback: ProgressCallback) -> None:
-    page = browser.new_page()
+def linkedin_extract_url_contents(conn: Connection, page: Page, filters:JobFilters, progress_callback: ProgressCallback) -> None:
     while True:
         job = database.get_next_ingest(conn, JobSource.LINKEDIN)
         if job is None:
@@ -168,11 +166,11 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:Jo
     page.close()
 
 
-def linkedin_scraper(conn: Connection, config: dict[str, object], filters: JobFilters, browser: Browser, callback: ProgressCallback) -> None:
+def linkedin_scraper(conn: Connection, config: dict[str, object], filters: JobFilters, page: Page, callback: ProgressCallback) -> None:
     callback(Text("Scraping LinkedIn URLs...", style="#f52bfb"))
-    linkedin_scrape_urls(conn, browser, config, callback)
+    linkedin_scrape_urls(conn, page, config, callback)
     callback(Text("Finished scraping LinkedIn URLs.", style="#f52bfb"))
 
     callback(Text("Extracting LinkedIn job contents...", style="#f52bfb"))
-    linkedin_extract_url_contents(conn, browser, filters, callback)
+    linkedin_extract_url_contents(conn, page, filters, callback)
     callback(Text("Finished extracting LinkedIn job contents.", style="#f52bfb"))

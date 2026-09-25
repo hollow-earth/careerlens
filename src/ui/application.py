@@ -406,8 +406,8 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
                 scraper, browser_type = SCRAPERS[source]
                 
                 try:
-                    with browser_context(browser_type) as browser:
-                        scraper(conn, app.config, app.filters, browser, progress_callback)
+                    with browser_context(browser_type) as page:
+                        scraper(conn, app.config, app.filters, page, progress_callback)
                 except PlaywrightError as error:
                     self.write_log(Text(f"Scraper {source.value} failed: {error}"))
         finally:
