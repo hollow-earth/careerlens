@@ -46,7 +46,7 @@ def linkedin_scrape_urls(conn: Connection, browser: Browser, config: dict[str, A
         raise Exception("You need at least one search term for LinkedIn!")
 
     page = browser.new_page()
-    _ = page.goto(search_url)
+    _ = page.goto(search_url, wait_until="domcontentloaded")
 
     # Close the annoying pop ups
     dismiss_button = page.get_by_role("button", name="Dismiss")
@@ -117,7 +117,7 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:Jo
         if job is None:
             break
 
-        _ = page.goto(job.url)
+        _ = page.goto(job.url, wait_until="domcontentloaded")
         dismiss_button = page.get_by_role("button", name="Dismiss")
         if dismiss_button.count() and dismiss_button.is_visible():
             dismiss_button.click()
