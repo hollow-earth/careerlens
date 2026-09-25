@@ -148,11 +148,11 @@ Some ideas currently on the roadmap:
 - Improved resource management for local LLMs
 - The project is intentionally being released as a working prototype rather than waiting for every planned feature to be completed.
 
-## Important: LinkedIn and Automated Access
+## Important: Automated Access
 
-Do not log into your personal LinkedIn account while using the current LinkedIn scraper. The scraper does not require or support authenticated LinkedIn access.
+Do not log into your personal accounts while using the current scraper. The scraper does not require or support authenticated access to any job boards.
 
-CareerLens currently accesses LinkedIn through its publicly accessible/guest-facing website. The scraper is not designed around authenticated access.
+CareerLens currently accesses many of the websites through their publicly accessible/guest-facing websites. The scraper is not designed around authenticated access.
 
 Automated access to third-party websites may be restricted by their terms of service, robots policies, rate limits, or other technical measures. Changes to those systems may also cause the scraper to stop working.
 
