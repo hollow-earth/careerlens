@@ -45,16 +45,17 @@ class ScraperSources(Enum):
     LINKEDIN = auto()
     INDEED = auto()
 
+# ScraperSources enum: function from scrapers.module, requires_browser
+SCRAPERS = {
+    ScraperSources.LINKEDIN: (linkedin_scraper, True),
+    ScraperSources.INDEED: (indeed_scraper, False)
+}
+
 # TODO: remove this soon, redundant function but there's still old code that depends on it
 def truncate_text(value: str, width: int) -> Text:
     text = Text(value)
     text.truncate(width, overflow="ellipsis")
     return text
-
-SCRAPERS = {
-    ScraperSources.LINKEDIN: linkedin_scraper,
-    ScraperSources.INDEED: indeed_scraper
-}
 
 """
 # ===================== #
@@ -380,9 +381,8 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
         yield Header(show_clock = True)
         yield RichLog(id = "log")
         yield Footer()
-        #yield Button("Test", id="sneed")
 
-    def dismiss_scrape_linkedin_screen(self) -> None:
+    def dismiss_scrape_screen(self) -> None:
         _ = self.dismiss()
 
     def on_mount(self) -> None:
@@ -395,7 +395,7 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
     def on_key(self, event: events.Key) -> None:
         if self.scrape_complete:
             _ = event.stop()
-            self.dismiss_scrape_linkedin_screen()
+            self.dismiss_scrape_screen()
     
     @work(thread=True)
     def run_scraper(self) -> None:
@@ -405,16 +405,27 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
         def progress_callback(message: Text) -> None:
             self.app.call_from_thread(self.write_log, message)
 
+        online_sources = [s for s in self.scraper_sources if SCRAPERS[s][1]]
+        offline_sources = [s for s in self.scraper_sources if not SCRAPERS[s][1]]
+        
         conn = connect()
         try:
-            with sync_playwright() as p:
-                browser = p.firefox.launch(headless = True)
-                for source in self.scraper_sources:
-                    s = SCRAPERS[source]
-                    try:
-                        s(conn, app.config, app.filters, browser, progress_callback)
-                    except PlaywrightError as error:
-                        self.write_log(Text(f"Scraper {source.value} failed: {error}", ))
+            init_tables(conn)
+            # Offline sources
+            for source in offline_sources:
+                s, _requires_browser = SCRAPERS[source]
+                s(conn, app.config, app.filters, progress_callback)
+
+            # Online sources
+            if online_sources:
+                with sync_playwright() as p:
+                    browser = p.firefox.launch(headless = True)
+                    for source in online_sources:
+                        s, _requires_browser = SCRAPERS[source]
+                        try:
+                            s(conn, app.config, app.filters, browser, progress_callback)
+                        except PlaywrightError as error:
+                            self.write_log(Text(f"Scraper {source.value} failed: {error}", ))
 
         finally:
             close(conn)
