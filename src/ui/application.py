@@ -48,7 +48,7 @@ class ScraperSources(Enum):
 # ScraperSources enum: function from scrapers.module, requires_browser
 SCRAPERS = {
     ScraperSources.LINKEDIN: (linkedin_scraper, True),
-    ScraperSources.INDEED: (indeed_scraper, False)
+    ScraperSources.INDEED: (indeed_scraper, True)
 }
 
 # TODO: remove this soon, redundant function but there's still old code that depends on it

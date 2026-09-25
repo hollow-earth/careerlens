@@ -3,6 +3,7 @@ data/
 .env
 config.toml
 /.zed
+ingest/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
