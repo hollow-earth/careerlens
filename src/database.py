@@ -41,6 +41,41 @@ def close(conn: sqlite3.Connection) -> None:
     conn.close()
 
 
+def backup_database(conn: sqlite3.Connection) -> None:
+    """
+    Create a daily backup. If a backup already exists, skip.
+    """
+    
+    today = datetime.now(timezone.utc).strftime("%Y%m%d")
+    backup_path = Path("./data/backups/")
+    backup_path.mkdir(parents=True, exist_ok=True)
+    backup_path = Path(backup_path, f"backup_{today}.db")
+
+    if backup_path.exists():
+        return
+        
+    try:
+        with sqlite3.connect(backup_path) as backup_conn: 
+            conn.backup(backup_conn)
+    except sqlite3.Error as error:
+        raise RuntimeError(f"Could not back up database: {error}") from error
+
+def cleanup_discarded_descriptions(conn: sqlite3.Connection) -> int:
+    """
+    Delete descriptions from discarded jobs that are >30 days old.
+
+    Returns:
+    ------
+    int: the number of rows updated
+    """
+    
+    cursor = conn.execute("""
+        UPDATE discarded
+        SET description = NULL
+        WHERE discarded_at < datetime('now', '-30 days') AND description IS NOT NULL
+    """)
+    return cursor.rowcount
+
 def init_tables(conn: sqlite3.Connection) -> None:
     cursor = conn.cursor()
     user_version = cursor.execute("PRAGMA user_version").fetchone()[0]

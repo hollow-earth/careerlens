@@ -26,12 +26,14 @@ from textual.widgets import (
 
 import webbrowser
 from database import (
+    cleanup_discarded_descriptions,
     close,
     connect,
     get_jobs_for_display,
     init_tables,
     mark_job_applied,
     mark_job_discarded,
+    backup_database
 )
 from pipeline import drain_staging, load_config, load_filters
 from scrapers.linkedin import linkedin_scraper
@@ -70,6 +72,14 @@ class MainApp(App): # pyright: ignore[reportMissingTypeArgument]
         self.config: dict[str, object] = load_config()
         self.filters: JobFilters = load_filters(self.config)
         self.dark = True
+        
+        with connect() as conn:
+            backup_database(conn)
+            removed = cleanup_discarded_descriptions(conn)
+            if removed >= 100:
+                conn.commit()
+                conn.execute("VACUUM")
+            
 
     def on_mount(self) -> None:
         self.push_screen(MainMenu())
