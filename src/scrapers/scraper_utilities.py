@@ -1,18 +1,9 @@
 import re
 import unicodedata
-from contextlib import contextmanager
 from dataclasses import InitVar, dataclass
 from datetime import datetime
-from enum import Enum, auto
-from pathlib import Path
-from tkinter import Tk, filedialog
+from enum import Enum
 from typing import Any
-
-from playwright.sync_api import sync_playwright
-
-from src.scrapers.indeed import indeed_scraper
-from src.scrapers.linkedin import linkedin_scraper
-from camoufox import Camoufox
 
 
 def normalize(text: str) -> str:
@@ -28,21 +19,6 @@ class JobFilters:
 
     def is_title_blacklisted(self, title: str) -> bool:
         return self.excluded_pattern.search(normalize(title)) is not None
-
-class Browsers(Enum):
-    CAMOUFOX = auto()
-    PLAYWRIGHT_FIREFOX = auto()
-    PLAYWRIGHT_CHROMIUM = auto()
-
-class ScraperSources(Enum):
-    LINKEDIN = auto()
-    INDEED = auto()
-
-# ScraperSources enum: function from scrapers.module, requires_browser
-SCRAPERS = {
-    ScraperSources.LINKEDIN: (linkedin_scraper, Browsers.PLAYWRIGHT_FIREFOX),
-    ScraperSources.INDEED: (indeed_scraper, Browsers.CAMOUFOX)
-}
 
 class JobSource(Enum):
     LINKEDIN = "linkedin"
@@ -107,19 +83,3 @@ class CompanyEntry:
     
     def __post_init__(self, name_input: str):
         self.normalized_name = normalize(name_input)
-
-@contextmanager
-def browser_context(browser_type: Browsers):
-    if browser_type is Browsers.PLAYWRIGHT_FIREFOX:
-        with sync_playwright() as p:
-            browser = p.firefox.launch(headless=True)
-            yield browser
-
-    elif browser_type is Browsers.PLAYWRIGHT_CHROMIUM:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            yield browser
-
-    elif browser_type is Browsers.CAMOUFOX:
-        with Camoufox(headless=True) as browser:
-            yield browser

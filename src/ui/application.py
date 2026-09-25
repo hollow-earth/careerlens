@@ -1,9 +1,9 @@
+import webbrowser
 from datetime import datetime
 from pathlib import Path
 from typing import cast
 
 from playwright.sync_api import Error as PlaywrightError
-from playwright.sync_api import sync_playwright
 from rich.text import Text
 from textual import events, work
 from textual.app import App, ComposeResult
@@ -23,8 +23,8 @@ from textual.widgets import (
     Static,
 )
 
-import webbrowser
 from database import (
+    backup_database,
     cleanup_discarded_descriptions,
     close,
     connect,
@@ -32,10 +32,11 @@ from database import (
     init_tables,
     mark_job_applied,
     mark_job_discarded,
-    backup_database
 )
 from pipeline import drain_staging, load_config, load_filters
-from scrapers.scraper_utilities import SCRAPERS, JobEntry, JobFilters, JobStatus, ScraperSources
+from scrapers.scraper_browsers import SCRAPERS, ScraperSources, browser_context
+from scrapers.scraper_utilities import JobEntry, JobFilters, JobStatus
+
 
 # TODO: remove this soon, redundant function but there's still old code that depends on it
 def truncate_text(value: str, width: int) -> Text:
@@ -394,23 +395,21 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
         non_browser_sources = [s for s in self.scraper_sources if SCRAPERS[s][1] is None]
         
         conn = connect()
+        # Non-browser sources
         try:
-            # Offline sources
             for source in non_browser_sources:
-                scraper, _requires_browser = SCRAPERS[source]
+                scraper, _browser_type = SCRAPERS[source]
                 scraper(conn, app.config, app.filters, progress_callback)
-
-            # Online sources
-            if browser_sources:
-                with sync_playwright() as p:
-                    browser = p.firefox.launch(headless = True)
-                    for source in browser_sources:
-                        s, _requires_browser = SCRAPERS[source]
-                        try:
-                            s(conn, app.config, app.filters, browser, progress_callback)
-                        except PlaywrightError as error:
-                            self.write_log(Text(f"Scraper {source.value} failed: {error}", ))
-
+                
+            # Browser sources
+            for source in browser_sources:
+                scraper, browser_type = SCRAPERS[source]
+                
+                try:
+                    with browser_context(browser_type) as browser:
+                        scraper(conn, app.config, app.filters, browser, progress_callback)
+                except PlaywrightError as error:
+                    self.write_log(Text(f"Scraper {source.value} failed: {error}"))
         finally:
             close(conn)
             self.scrape_complete = True
