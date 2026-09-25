@@ -3,8 +3,19 @@ import unicodedata
 from dataclasses import InitVar, dataclass
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
+from tkinter import Tk, filedialog
 from typing import Any
 
+
+def select_directory() -> Path:
+    root = Tk()
+    root.withdraw()
+
+    directory = filedialog.askdirectory(title="Select Indeed HTML directory")
+
+    root.destroy()
+    return Path(directory)
 
 def normalize(text: str) -> str:
     return "".join(
