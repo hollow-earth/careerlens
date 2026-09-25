@@ -9,6 +9,7 @@ from scrapers.scraper_utilities import (
     JobEntry,
     JobSource,
     JobStatus,
+    normalize,
 )
 
 INGEST_REQUIRED = ("source", "job_id", "url")
@@ -398,6 +399,7 @@ def write_company_to_companies(conn: sqlite3.Connection, company: CompanyEntry) 
     )
 
 def get_company(conn: sqlite3.Connection, company: str) -> None | CompanyEntry:
+    company = normalize(company)
     row = conn.execute("""
         SELECT * FROM companies
         WHERE normalized_name = ?

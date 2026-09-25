@@ -4,13 +4,12 @@ from random import uniform
 from re import search
 from sqlite3 import Connection
 from time import sleep
+from typing import Any
 
 from playwright.sync_api import Browser
 from rich.text import Text
-from typing import Any
 
 import database
-from scrapers import scraper_utilities
 from scrapers.scraper_utilities import (
     CompanyEntry,
     CompanyTrustStatus,
@@ -139,7 +138,7 @@ def linkedin_extract_url_contents(conn: Connection, browser: Browser, filters:Jo
         # TODO: change back to JobStatus.PENDING once dedup is implemented with >1 scraper
 
         progress_callback(Text(f"Found job {job.title} at {job.company} with job ID {job.job_id}"))
-        candidate_company = database.get_company(conn, scraper_utilities.normalize(job.company))
+        candidate_company = database.get_company(conn, job.company)
         if candidate_company is not None and candidate_company.trust_status.value == CompanyTrustStatus.BLOCKED.value:
             job.discard_reason = "Match in blacklisted_companies"
             progress_callback(Text("\t Job discarded due to match in blacklisted_companies"))
