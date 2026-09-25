@@ -74,6 +74,7 @@ class MainApp(App): # pyright: ignore[reportMissingTypeArgument]
         self.dark = True
         
         with connect() as conn:
+            init_tables(conn)
             backup_database(conn)
             removed = cleanup_discarded_descriptions(conn)
             if removed >= 100:
@@ -400,8 +401,6 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
 
         conn = connect()
         try:
-            init_tables(conn)
-
             with sync_playwright() as p:
                 browser = p.firefox.launch(headless = True)
                 for source in self.scraper_sources:
@@ -450,7 +449,6 @@ class DrainStaging(Screen): # pyright: ignore[reportMissingTypeArgument]
 
         conn = connect()
         try:
-            init_tables(conn)
             drain_staging(conn, app.config, progress_callback)
 
         finally:
