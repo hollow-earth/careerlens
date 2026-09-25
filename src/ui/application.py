@@ -1,5 +1,4 @@
 from datetime import datetime
-from enum import Enum, auto
 from pathlib import Path
 from typing import cast
 
@@ -36,20 +35,7 @@ from database import (
     backup_database
 )
 from pipeline import drain_staging, load_config, load_filters
-from scrapers.indeed import indeed_scraper
-from scrapers.linkedin import linkedin_scraper
-from scrapers.scraper_utilities import JobEntry, JobFilters, JobStatus
-
-
-class ScraperSources(Enum):
-    LINKEDIN = auto()
-    INDEED = auto()
-
-# ScraperSources enum: function from scrapers.module, requires_browser
-SCRAPERS = {
-    ScraperSources.LINKEDIN: (linkedin_scraper, True),
-    ScraperSources.INDEED: (indeed_scraper, True)
-}
+from scrapers.scraper_utilities import SCRAPERS, JobEntry, JobFilters, JobStatus, ScraperSources
 
 # TODO: remove this soon, redundant function but there's still old code that depends on it
 def truncate_text(value: str, width: int) -> Text:
@@ -405,22 +391,22 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
         def progress_callback(message: Text) -> None:
             self.app.call_from_thread(self.write_log, message)
 
-        online_sources = [s for s in self.scraper_sources if SCRAPERS[s][1]]
-        offline_sources = [s for s in self.scraper_sources if not SCRAPERS[s][1]]
+        browser_sources = [s for s in self.scraper_sources if SCRAPERS[s][1] is not None]
+        non_browser_sources = [s for s in self.scraper_sources if SCRAPERS[s][1] is None]
         
         conn = connect()
         try:
             init_tables(conn)
             # Offline sources
-            for source in offline_sources:
-                s, _requires_browser = SCRAPERS[source]
-                s(conn, app.config, app.filters, progress_callback)
+            for source in non_browser_sources:
+                scraper, _requires_browser = SCRAPERS[source]
+                scraper(conn, app.config, app.filters, progress_callback)
 
             # Online sources
-            if online_sources:
+            if browser_sources:
                 with sync_playwright() as p:
                     browser = p.firefox.launch(headless = True)
-                    for source in online_sources:
+                    for source in browser_sources:
                         s, _requires_browser = SCRAPERS[source]
                         try:
                             s(conn, app.config, app.filters, browser, progress_callback)
