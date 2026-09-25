@@ -128,7 +128,6 @@ Some current limitations include:
 - Ollama must already be installed and configured, including a compatible model.
 - Playwright must already be installed and configured, including the required browser binaries.
 - The default LLM model may require significant system resources. Performance will depend heavily on the model and available hardware.
-- Job browsing currently loads a limited number of results rather than implementing full infinite scrolling (currently 100, sorted by most recent).
 - Scraping currently runs to completion once started; proper cancellation and interruption handling are planned. The current workaround is to close the UI with Ctrl+Q and terminate the underlying process with Ctrl+C.
 - Some internal components are functional but would benefit from further refactoring.
 - Website changes made by supported job sources may break scraper functionality.
