@@ -4,6 +4,7 @@ data/
 config.toml
 /.zed
 ingest/
+.playwright-profile/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
