@@ -81,7 +81,8 @@ Each job receives a numerical score based on its overall fit with the candidate.
 |   **0–49** | 🔴 Do not apply                | Poor overall fit, major qualification gaps, or an important dealbreaker |
 
 ## Available Scrapers
-- LinkedIn (guest/public website)
+- LinkedIn (guest/public website) - experimental
+- Indeed (needs HTML pages saved to disk to work) - experimental
 
 CareerLens is designed around a modular scraper architecture, so additional job sources can be added without rewriting the rest of the application.
 
