@@ -106,7 +106,6 @@ def linkedin_scrape_urls(conn: Connection, page: Page, config: dict[str, Any], p
         count = job_cards.count()
         i += 1
         sleep(PAGE_DELAY)
-    page.close()
 
 
 def linkedin_extract_url_contents(conn: Connection, page: Page, filters:JobFilters, progress_callback: ProgressCallback) -> None:
@@ -162,9 +161,6 @@ def linkedin_extract_url_contents(conn: Connection, page: Page, filters:JobFilte
             except:
                 raise Exception("Couldn't move row from ingest to staging!")
             sleep(PAGE_DELAY)
-
-    page.close()
-
 
 def linkedin_scraper(conn: Connection, config: dict[str, object], filters: JobFilters, page: Page, callback: ProgressCallback) -> None:
     callback(Text("Scraping LinkedIn URLs...", style="#f52bfb"))
