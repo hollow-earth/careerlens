@@ -374,7 +374,7 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
     def on_mount(self) -> None:
         self.run_scraper()
 
-    def write_log(self, message: Text) -> None:
+    def write_log(self, message: Text | str) -> None:
         log = self.query_one("#log", RichLog)
         _ = log.write(message)
 
@@ -388,7 +388,7 @@ class ScrapeWebsites(Screen): # pyright: ignore[reportMissingTypeArgument]
         # TODO: implement a way to quit halfway through with a button, ^q, and ^c
         app = cast(MainApp, self.app)   # basedpyright workaround
 
-        def progress_callback(message: Text) -> None:
+        def progress_callback(message: Text | str) -> None:
             self.app.call_from_thread(self.write_log, message)
 
         browser_sources = [s for s in self.scraper_sources if SCRAPERS[s][1] is not None]
